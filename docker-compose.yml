@@ -1,15 +1,21 @@
 version: "3.8"
 
 services:
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
+  app:
+    build: .
     container_name: expense_backend_app
-    volumes:
-      - .:/var/www
+    restart: always
+    ports:
+      - "8000:8000"
     depends_on:
       - mysql
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      DB_HOST: mysql
+      DB_DATABASE: expenses_control
+      DB_USERNAME: laravel
+      DB_PASSWORD: root
     networks:
       - expense-control
 
@@ -17,8 +23,6 @@ services:
     image: mysql:8.0
     container_name: expense_backend_mysql
     restart: always
-    ports:
-      - "3306:3306"
     environment:
       MYSQL_DATABASE: expenses_control
       MYSQL_ROOT_PASSWORD: root
@@ -26,19 +30,6 @@ services:
       MYSQL_PASSWORD: root
     volumes:
       - mysql_data:/var/lib/mysql
-    networks:
-      - expense-control
-
-  nginx:
-    image: nginx:alpine
-    container_name: expense_backend_nginx
-    ports:
-      - "80:80"
-    volumes:
-      - .:/var/www
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
-    depends_on:
-      - backend
     networks:
       - expense-control
 
