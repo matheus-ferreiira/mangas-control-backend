@@ -1,0 +1,41 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: expense_backend_app
+    volumes:
+      - .:/var/www
+    depends_on:
+      - mysql
+    networks:
+      - expense-control
+
+  mysql:
+    image: mysql:8.0
+    container_name: expense_backend_mysql
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: expenses_control
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_PASSWORD: root
+      MYSQL_USER: laravel
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - expense-control
+
+  nginx:
+    image: nginx:alpine
+    container_name: expense_backend_nginx
+    ports:
+      - "80:80"
+    volumes:
+      - .:/var/www
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - backend
+    networks:
+      - expense-control
