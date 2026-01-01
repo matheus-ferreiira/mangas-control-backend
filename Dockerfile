@@ -1,4 +1,4 @@
-FROM dunglas/frankenphp:builder-php8.3
+FROM dunglas/frankenphp:builder-php8.4
 
 # Extensões PHP necessárias para Laravel
 RUN install-php-extensions \
