@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   backend:
     build:
@@ -20,8 +22,8 @@ services:
     environment:
       MYSQL_DATABASE: expenses_control
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_PASSWORD: root
       MYSQL_USER: laravel
+      MYSQL_PASSWORD: root
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
@@ -39,3 +41,10 @@ services:
       - backend
     networks:
       - expense-control
+
+volumes:
+  mysql_data:
+
+networks:
+  expense-control:
+    driver: bridge
