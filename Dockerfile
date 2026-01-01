@@ -8,9 +8,10 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     libxml2-dev \
     libzip-dev \
+    libicu-dev \
     zip \
     curl \
-    && docker-php-ext-install pdo_mysql mbstring zip exif pcntl bcmath gd
+    && docker-php-ext-install intl pdo_mysql mbstring zip exif pcntl bcmath gd
 
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
@@ -24,6 +25,9 @@ COPY . .
 # Permissões
 RUN chown -R www-data:www-data /var/www \
     && chmod -R 775 /var/www/storage /var/www/bootstrap/cache
+
+# Instala dependências Laravel
+RUN composer install --no-dev --optimize-autoloader
 
 EXPOSE 9000
 CMD ["php-fpm"]
