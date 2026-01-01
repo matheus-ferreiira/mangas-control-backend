@@ -1,0 +1,65 @@
+# Logs
+storage/logs/*
+!storage/logs/.gitkeep
+*.log
+
+# Cache e arquivos temporários
+bootstrap/cache/*
+!bootstrap/cache/.gitkeep
+storage/app/*
+!storage/app/public
+!storage/app/.gitkeep
+storage/framework/cache/*
+!storage/framework/cache/.gitkeep
+storage/framework/sessions/*
+!storage/framework/sessions/.gitkeep
+storage/framework/testing/*
+!storage/framework/testing/.gitkeep
+storage/framework/views/*
+!storage/framework/views/.gitkeep
+
+# Node modules (se houver)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Vendor (será instalado via composer install)
+vendor/
+
+# Environment files
+#.env
+#.env.backup
+#.env.production
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git
+.gitattributes
+.gitignore
+
+# Docker
+docker/certbot/
+Dockerfile
+docker-compose.yml
+docker-compose.*.yml
+
+# Tests
+tests/
+phpunit.xml
+.phpunit.result.cache
+
+# Documentation
+README.md
+docs/
+
+# Build artifacts
+public/hot
+public/storage
+public/mix-manifest.json

@@ -1,33 +1,48 @@
-FROM php:8.2-fpm
+FROM dunglas/frankenphp:builder-php8.3
+
+# Extensões PHP necessárias para Laravel
+RUN install-php-extensions \
+    pdo_mysql \
+    gd \
+    intl \
+    bcmath \
+    redis \
+    curl \
+    exif \
+    mbstring \
+    pcntl \
+    xml \
+    zip
 
 # Dependências do sistema
-RUN apt-get update && apt-get install -y \
+RUN apt update && apt install -y \
     git \
     unzip \
-    libpng-dev \
-    libonig-dev \
-    libxml2-dev \
-    libzip-dev \
-    libicu-dev \
-    zip \
-    curl \
-    && docker-php-ext-install intl pdo_mysql mbstring zip exif pcntl bcmath gd
+    cron \
+    supervisor \
+    && rm -rf /var/lib/apt/lists/*
 
-# Composer
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+# Instalar Composer
+RUN curl -sS https://getcomposer.org/installer -o composer-setup.php && \
+    php composer-setup.php --install-dir=/usr/local/bin --filename=composer && \
+    rm composer-setup.php
 
-# Diretório da aplicação
-WORKDIR /var/www
-
-# Copia arquivos
+# Copiar aplicação
+WORKDIR /app
 COPY . .
 
-# Permissões
-RUN chown -R www-data:www-data /var/www \
-    && chmod -R 775 /var/www/storage /var/www/bootstrap/cache
+# Garantir permissões
+RUN chown -R www-data:www-data /app \
+    && chmod -R 775 storage bootstrap/cache
 
-# Instala dependências Laravel
-RUN composer install --no-dev --optimize-autoloader
+# Instalar dependências Laravel
+RUN composer install --no-dev --no-interaction --optimize-autoloader
 
-EXPOSE 9000
-CMD ["php-fpm"]
+# Gerar cache (opcional, mas recomendado)
+RUN php artisan config:clear && \
+    php artisan config:cache && \
+    php artisan route:cache
+
+EXPOSE 8000
+
+ENTRYPOINT ["php", "artisan", "octane:frankenphp", "--host=0.0.0.0", "--port=8000"]
