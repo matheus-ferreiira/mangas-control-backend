@@ -1,6 +1,26 @@
-FROM dunglas/frankenphp:builder-php8.4
+# ===============================
+# STAGE 1 - Composer (build)
+# ===============================
+FROM composer:2 AS vendor
 
-# Extensões PHP necessárias para Laravel
+WORKDIR /app
+
+COPY composer.json composer.lock ./
+
+# Instala dependências sem scripts (menos RAM)
+RUN composer install \
+    --no-dev \
+    --no-interaction \
+    --no-scripts \
+    --no-progress \
+    --prefer-dist
+
+# ===============================
+# STAGE 2 - Runtime (FrankenPHP)
+# ===============================
+FROM dunglas/frankenphp:php8.4
+
+# Extensões PHP necessárias
 RUN install-php-extensions \
     pdo_mysql \
     gd \
@@ -14,34 +34,20 @@ RUN install-php-extensions \
     xml \
     zip
 
-# Dependências do sistema
-RUN apt update && apt install -y \
-    git \
-    unzip \
-    cron \
-    supervisor \
-    && rm -rf /var/lib/apt/lists/*
-
-# Instalar Composer
-RUN curl -sS https://getcomposer.org/installer -o composer-setup.php && \
-    php composer-setup.php --install-dir=/usr/local/bin --filename=composer && \
-    rm composer-setup.php
-
-# Copiar aplicação
 WORKDIR /app
+
+# Copia vendor pronto
+COPY --from=vendor /app/vendor /app/vendor
+
+# Copia o restante da aplicação
 COPY . .
 
-# Garantir permissões
+# Permissões
 RUN chown -R www-data:www-data /app \
     && chmod -R 775 storage bootstrap/cache
 
-# Instalar dependências Laravel
-RUN composer install --no-dev --no-interaction --optimize-autoloader
-
-# Gerar cache (opcional, mas recomendado)
-RUN php artisan config:clear && \
-    php artisan config:cache && \
-    php artisan route:cache
+# Cache leve (opcional)
+RUN php artisan config:clear && php artisan config:cache
 
 EXPOSE 8000
 
