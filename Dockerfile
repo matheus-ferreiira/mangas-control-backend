@@ -11,7 +11,8 @@ RUN composer install \
     --no-dev \
     --no-interaction \
     --no-progress \
-    --prefer-dist
+    --prefer-dist \
+    --no-scripts
 
 # ===============================
 # STAGE 2 — Runtime
@@ -33,11 +34,17 @@ RUN install-php-extensions \
 
 WORKDIR /app
 
-# copia dependências instaladas
+# copiar composer para usar dump-autoload
+COPY --from=vendor /usr/bin/composer /usr/bin/composer
+
+# copiar vendor
 COPY --from=vendor /app/vendor /app/vendor
 
-# copia projeto
+# copiar projeto
 COPY . .
+
+# gerar autoload otimizado
+RUN composer dump-autoload --optimize --no-dev
 
 RUN chown -R www-data:www-data /app \
     && chmod -R 775 storage bootstrap/cache
