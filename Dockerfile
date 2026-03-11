@@ -1,3 +1,21 @@
+# ===============================
+# STAGE 1 — Composer
+# ===============================
+FROM composer:2 AS vendor
+
+WORKDIR /app
+
+COPY composer.json composer.lock ./
+
+RUN composer install \
+    --no-dev \
+    --no-interaction \
+    --no-progress \
+    --prefer-dist
+
+# ===============================
+# STAGE 2 — Runtime
+# ===============================
 FROM dunglas/frankenphp:php8.4
 
 RUN install-php-extensions \
@@ -15,16 +33,12 @@ RUN install-php-extensions \
 
 WORKDIR /app
 
-# copia o projeto inteiro primeiro
+# copia dependências instaladas
+COPY --from=vendor /app/vendor /app/vendor
+
+# copia projeto
 COPY . .
 
-# instala dependências
-RUN composer install \
-    --no-dev \
-    --optimize-autoloader \
-    --no-interaction
-
-# permissões
 RUN chown -R www-data:www-data /app \
     && chmod -R 775 storage bootstrap/cache
 
