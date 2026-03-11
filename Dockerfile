@@ -1,5 +1,5 @@
 # ===============================
-# STAGE 1 - Composer (build)
+# STAGE 1 - Composer
 # ===============================
 FROM composer:2 AS vendor
 
@@ -10,7 +10,6 @@ COPY composer.json composer.lock ./
 RUN composer install \
     --no-dev \
     --no-interaction \
-    --no-scripts \
     --no-progress \
     --prefer-dist
 
@@ -35,7 +34,6 @@ RUN install-php-extensions \
 WORKDIR /app
 
 COPY --from=vendor /app/vendor /app/vendor
-
 COPY . .
 
 RUN chown -R www-data:www-data /app \
@@ -43,4 +41,4 @@ RUN chown -R www-data:www-data /app \
 
 EXPOSE 8000
 
-ENTRYPOINT ["php", "artisan", "octane:frankenphp", "--host=0.0.0.0", "--port=8000"]
+ENTRYPOINT ["php", "-S", "0.0.0.0:8000", "-t", "public"]
