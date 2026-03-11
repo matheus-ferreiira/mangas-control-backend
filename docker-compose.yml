@@ -7,35 +7,13 @@ services:
     restart: always
     ports:
       - "8000:8000"
-    depends_on:
-      - mysql
     environment:
       APP_ENV: production
       APP_DEBUG: "false"
-      DB_HOST: mysql
+      DB_HOST: host.docker.internal
+      DB_PORT: 3306
       DB_DATABASE: expenses_control
       DB_USERNAME: laravel
       DB_PASSWORD: root
-    networks:
-      - expense-control
-
-  mysql:
-    image: mysql:8.0
-    container_name: expense_backend_mysql
-    restart: always
-    environment:
-      MYSQL_DATABASE: expenses_control
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_USER: laravel
-      MYSQL_PASSWORD: root
-    volumes:
-      - mysql_data:/var/lib/mysql
-    networks:
-      - expense-control
-
-volumes:
-  mysql_data:
-
-networks:
-  expense-control:
-    driver: bridge
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

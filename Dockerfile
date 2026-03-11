@@ -7,7 +7,6 @@ WORKDIR /app
 
 COPY composer.json composer.lock ./
 
-# Instala dependências sem scripts (menos RAM)
 RUN composer install \
     --no-dev \
     --no-interaction \
@@ -16,11 +15,10 @@ RUN composer install \
     --prefer-dist
 
 # ===============================
-# STAGE 2 - Runtime (FrankenPHP)
+# STAGE 2 - Runtime
 # ===============================
 FROM dunglas/frankenphp:php8.4
 
-# Extensões PHP necessárias
 RUN install-php-extensions \
     pdo_mysql \
     gd \
@@ -36,18 +34,12 @@ RUN install-php-extensions \
 
 WORKDIR /app
 
-# Copia vendor pronto
 COPY --from=vendor /app/vendor /app/vendor
 
-# Copia o restante da aplicação
 COPY . .
 
-# Permissões
 RUN chown -R www-data:www-data /app \
     && chmod -R 775 storage bootstrap/cache
-
-# Cache leve (opcional)
-RUN php artisan config:clear && php artisan config:cache
 
 EXPOSE 8000
 
