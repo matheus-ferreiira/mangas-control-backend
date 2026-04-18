@@ -1,0 +1,497 @@
+openapi: 3.0.3
+info:
+  title: Manga Tracker API
+  description: API REST para controle de leitura de mangás com autenticação via Google.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000/api
+    description: Servidor local
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        name: { type: string, example: "João Silva" }
+        email: { type: string, example: "joao@gmail.com" }
+        avatar: { type: string, nullable: true, example: "https://lh3.googleusercontent.com/..." }
+        role: { type: string, enum: [user, admin], example: user }
+        created_at: { type: string, format: date-time }
+
+    Manga:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        name: { type: string, example: "One Piece" }
+        cover: { type: string, nullable: true, example: "https://cdn.myanimelist.net/..." }
+        total_chapters: { type: integer, nullable: true, example: 1100 }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    Site:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        name: { type: string, example: "MangaDex" }
+        url: { type: string, example: "https://mangadex.org" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    UserManga:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        user_id: { type: integer, example: 1 }
+        manga: { $ref: '#/components/schemas/Manga' }
+        site: { $ref: '#/components/schemas/Site' }
+        current_chapters: { type: integer, example: 587 }
+        rating: { type: number, format: float, nullable: true, example: 9.5 }
+        status:
+          type: string
+          enum: [reading, completed, paused, dropped, plan_to_read]
+          example: reading
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    PaginationMeta:
+      type: object
+      properties:
+        current_page: { type: integer }
+        last_page: { type: integer }
+        per_page: { type: integer }
+        total: { type: integer }
+
+    SuccessResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        message: { type: string }
+        data: { type: object }
+
+    ErrorResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        message: { type: string }
+        errors: { type: object }
+
+paths:
+  # ── AUTH ─────────────────────────────────────────────
+  /auth/google:
+    post:
+      tags: [Auth]
+      summary: Login com Google
+      description: >
+        Recebe o access_token do Google (obtido pelo client após o fluxo OAuth2)
+        e retorna um token Sanctum para autenticar nas demais rotas.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+                  description: Google OAuth2 access token
+                  example: "ya29.a0ARrdaM..."
+      responses:
+        '200':
+          description: Login bem-sucedido
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user: { $ref: '#/components/schemas/User' }
+                          access_token: { type: string, example: "1|abc123..." }
+                          token_type: { type: string, example: "Bearer" }
+        '401':
+          description: Token Google inválido
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout
+      responses:
+        '200':
+          description: Logout realizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SuccessResponse' }
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Dados do usuário autenticado
+      responses:
+        '200':
+          description: Usuário autenticado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/User' }
+
+  # ── MANGAS ───────────────────────────────────────────
+  /mangas:
+    get:
+      tags: [Mangas]
+      summary: Listar mangás
+      parameters:
+        - { name: per_page, in: query, schema: { type: integer, default: 15 } }
+        - { name: search, in: query, schema: { type: string }, description: Busca por nome }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+      responses:
+        '200':
+          description: Lista paginada de mangás
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          data:
+                            type: array
+                            items: { $ref: '#/components/schemas/Manga' }
+                          meta: { $ref: '#/components/schemas/PaginationMeta' }
+
+    post:
+      tags: [Mangas]
+      summary: Criar mangá
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, example: "Naruto" }
+                cover: { type: string, nullable: true, example: "https://cdn.myanimelist.net/..." }
+                total_chapters: { type: integer, nullable: true, example: 700 }
+      responses:
+        '201':
+          description: Mangá criado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Manga' }
+        '422':
+          description: Erro de validação
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /mangas/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+
+    get:
+      tags: [Mangas]
+      summary: Buscar mangá por ID
+      responses:
+        '200':
+          description: Mangá encontrado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Manga' }
+        '404':
+          description: Não encontrado
+
+    patch:
+      tags: [Mangas]
+      summary: Atualizar mangá
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                cover: { type: string, nullable: true }
+                total_chapters: { type: integer, nullable: true }
+      responses:
+        '200':
+          description: Mangá atualizado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Manga' }
+
+    delete:
+      tags: [Mangas]
+      summary: Remover mangá
+      responses:
+        '200':
+          description: Mangá removido
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SuccessResponse' }
+
+  # ── SITES ────────────────────────────────────────────
+  /sites:
+    get:
+      tags: [Sites]
+      summary: Listar sites
+      parameters:
+        - { name: per_page, in: query, schema: { type: integer, default: 15 } }
+        - { name: search, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+      responses:
+        '200':
+          description: Lista paginada de sites
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SuccessResponse' }
+
+    post:
+      tags: [Sites]
+      summary: Criar site
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, url]
+              properties:
+                name: { type: string, example: "MangaDex" }
+                url: { type: string, example: "https://mangadex.org" }
+      responses:
+        '201':
+          description: Site criado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Site' }
+
+  /sites/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+
+    get:
+      tags: [Sites]
+      summary: Buscar site por ID
+      responses:
+        '200':
+          description: Site encontrado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Site' }
+
+    patch:
+      tags: [Sites]
+      summary: Atualizar site
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                url: { type: string }
+      responses:
+        '200':
+          description: Site atualizado
+
+    delete:
+      tags: [Sites]
+      summary: Remover site
+      responses:
+        '200':
+          description: Site removido
+
+  # ── USER MANGAS ──────────────────────────────────────
+  /user-mangas:
+    get:
+      tags: [UserMangas]
+      summary: Listar mangás do usuário autenticado
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [reading, completed, paused, dropped, plan_to_read]
+        - { name: per_page, in: query, schema: { type: integer, default: 15 } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+      responses:
+        '200':
+          description: Lista paginada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          data:
+                            type: array
+                            items: { $ref: '#/components/schemas/UserManga' }
+                          meta: { $ref: '#/components/schemas/PaginationMeta' }
+
+    post:
+      tags: [UserMangas]
+      summary: Adicionar mangá à lista
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [manga_id, site_id]
+              properties:
+                manga_id: { type: integer, example: 1 }
+                site_id: { type: integer, example: 1 }
+                current_chapters: { type: integer, example: 0 }
+                rating: { type: number, nullable: true, example: 9.0 }
+                status:
+                  type: string
+                  enum: [reading, completed, paused, dropped, plan_to_read]
+                  example: plan_to_read
+      responses:
+        '201':
+          description: Adicionado com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/UserManga' }
+
+  /user-mangas/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+
+    get:
+      tags: [UserMangas]
+      summary: Buscar item da lista por ID
+      responses:
+        '200':
+          description: Item encontrado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/UserManga' }
+
+    patch:
+      tags: [UserMangas]
+      summary: Atualizar status, rating ou capítulos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                manga_id: { type: integer }
+                site_id: { type: integer }
+                current_chapters: { type: integer, example: 600 }
+                rating: { type: number, nullable: true, example: 9.5 }
+                status:
+                  type: string
+                  enum: [reading, completed, paused, dropped, plan_to_read]
+      responses:
+        '200':
+          description: Atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/UserManga' }
+
+    delete:
+      tags: [UserMangas]
+      summary: Remover mangá da lista
+      responses:
+        '200':
+          description: Removido com sucesso
+
+  /user-mangas/{id}/increment:
+    patch:
+      tags: [UserMangas]
+      summary: Incrementar capítulo atual em +1
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: Capítulo incrementado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/UserManga' }
+
+tags:
+  - name: Auth
+    description: Autenticação com Google via Socialite
+  - name: Mangas
+    description: CRUD de mangás
+  - name: Sites
+    description: CRUD de sites de leitura
+  - name: UserMangas
+    description: Lista de leitura do usuário autenticado
