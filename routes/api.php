@@ -24,3 +24,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{userManga}', [UserMangaController::class, 'destroy']);
     });
 });
+
+Route::get('/docs', function () {
+    return view('swagger');
+});
