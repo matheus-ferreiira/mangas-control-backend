@@ -28,3 +28,12 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::get('/docs', function () {
     return view('swagger');
 });
+
+Route::get('/db-test', function () {
+    try {
+        DB::connection()->getPdo();
+        return 'DB OK';
+    } catch (\Exception $e) {
+        return $e->getMessage();
+    }
+});
