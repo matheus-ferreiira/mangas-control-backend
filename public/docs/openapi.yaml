@@ -1,101 +1,203 @@
 openapi: 3.0.3
 info:
-  title: Manga Tracker API
-  description: API REST para controle de leitura de mangás com autenticação via Google.
-  version: 1.0.0
+  title: Content Tracker API
+  description: |
+    API REST para controle de leitura/visualização de mangás, animes e novels.
+
+    ## Autenticação
+    Utilize o endpoint `POST /auth/google` para obter um Bearer token via Google OAuth.
+    Inclua o token no header `Authorization: Bearer {token}` em todas as requisições autenticadas.
+
+    ## Upload de Imagens
+    Endpoints de criação/atualização de conteúdo aceitam `multipart/form-data` para upload de capa.
+    A URL da imagem é retornada no campo `cover` do resource.
+  version: 2.0.0
+  contact:
+    name: Content Tracker
 
 servers:
   - url: http://localhost:8000/api
-    description: Servidor local
+    description: Servidor de desenvolvimento
 
-security:
-  - BearerAuth: []
+tags:
+  - name: Auth
+    description: Autenticação via Google OAuth
+  - name: Contents
+    description: Acervo geral de conteúdos (mangás, animes, novels)
+  - name: Sites
+    description: Sites de leitura/visualização
+  - name: User Contents
+    description: Biblioteca pessoal do usuário
 
 components:
   securitySchemes:
-    BearerAuth:
+    bearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: JWT
+      bearerFormat: Sanctum
 
   schemas:
     User:
       type: object
       properties:
-        id: { type: integer, example: 1 }
-        name: { type: string, example: "João Silva" }
-        email: { type: string, example: "joao@gmail.com" }
-        avatar: { type: string, nullable: true, example: "https://lh3.googleusercontent.com/..." }
-        role: { type: string, enum: [user, admin], example: user }
-        created_at: { type: string, format: date-time }
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Matheus Ferreira
+        email:
+          type: string
+          format: email
+          example: matheus@example.com
+        avatar:
+          type: string
+          nullable: true
+          example: https://lh3.googleusercontent.com/a/photo.jpg
+        role:
+          type: string
+          enum: [user, admin]
+          example: user
+        created_at:
+          type: string
+          format: date-time
 
-    Manga:
+    Content:
       type: object
       properties:
-        id: { type: integer, example: 1 }
-        name: { type: string, example: "One Piece" }
-        cover: { type: string, nullable: true, example: "https://cdn.myanimelist.net/..." }
-        total_chapters: { type: integer, nullable: true, example: 1100 }
-        created_at: { type: string, format: date-time }
-        updated_at: { type: string, format: date-time }
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: One Piece
+        cover:
+          type: string
+          nullable: true
+          example: http://localhost:8000/storage/covers/one-piece.jpg
+        type:
+          type: string
+          enum: [manga, anime, novel]
+          example: manga
+        total_units:
+          type: integer
+          nullable: true
+          example: 1110
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
 
     Site:
       type: object
       properties:
-        id: { type: integer, example: 1 }
-        name: { type: string, example: "MangaDex" }
-        url: { type: string, example: "https://mangadex.org" }
-        created_at: { type: string, format: date-time }
-        updated_at: { type: string, format: date-time }
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: MangaDex
+        url:
+          type: string
+          format: uri
+          example: https://mangadex.org
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
 
-    UserManga:
+    UserContent:
       type: object
       properties:
-        id: { type: integer, example: 1 }
-        user_id: { type: integer, example: 1 }
-        manga: { $ref: '#/components/schemas/Manga' }
-        site: { $ref: '#/components/schemas/Site' }
-        current_chapters: { type: integer, example: 587 }
-        rating: { type: number, format: float, nullable: true, example: 9.5 }
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 1
+        content:
+          $ref: '#/components/schemas/Content'
+        site:
+          $ref: '#/components/schemas/Site'
+          nullable: true
+        current_units:
+          type: integer
+          example: 150
+        rating:
+          type: number
+          format: float
+          nullable: true
+          example: 9.5
         status:
           type: string
           enum: [reading, completed, paused, dropped, plan_to_read]
           example: reading
-        created_at: { type: string, format: date-time }
-        updated_at: { type: string, format: date-time }
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
 
     PaginationMeta:
       type: object
       properties:
-        current_page: { type: integer }
-        last_page: { type: integer }
-        per_page: { type: integer }
-        total: { type: integer }
+        current_page:
+          type: integer
+          example: 1
+        last_page:
+          type: integer
+          example: 5
+        per_page:
+          type: integer
+          example: 15
+        total:
+          type: integer
+          example: 72
+        from:
+          type: integer
+          example: 1
+        to:
+          type: integer
+          example: 15
 
     SuccessResponse:
       type: object
       properties:
-        success: { type: boolean, example: true }
-        message: { type: string }
-        data: { type: object }
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+        data:
+          type: object
 
     ErrorResponse:
       type: object
       properties:
-        success: { type: boolean, example: false }
-        message: { type: string }
-        errors: { type: object }
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Erro de validação
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
 
 paths:
-  # ── AUTH ─────────────────────────────────────────────
   /auth/google:
     post:
       tags: [Auth]
       summary: Login com Google
-      description: >
-        Recebe o access_token do Google (obtido pelo client após o fluxo OAuth2)
-        e retorna um token Sanctum para autenticar nas demais rotas.
-      security: []
+      description: Autentica o usuário via token do Google OAuth e retorna um Bearer token Sanctum.
       requestBody:
         required: true
         content:
@@ -106,11 +208,11 @@ paths:
               properties:
                 token:
                   type: string
-                  description: Google OAuth2 access token
-                  example: "ya29.a0ARrdaM..."
+                  description: ID Token retornado pelo Google Sign-In
+                  example: eyJhbGciOiJSUzI1NiIsImtp...
       responses:
         '200':
-          description: Login bem-sucedido
+          description: Login realizado com sucesso
           content:
             application/json:
               schema:
@@ -121,33 +223,41 @@ paths:
                       data:
                         type: object
                         properties:
-                          user: { $ref: '#/components/schemas/User' }
-                          access_token: { type: string, example: "1|abc123..." }
-                          token_type: { type: string, example: "Bearer" }
+                          user:
+                            $ref: '#/components/schemas/User'
+                          token:
+                            type: string
+                            example: 1|AbCdEfGhIjKlMnOpQrStUvWxYz
         '401':
-          description: Token Google inválido
+          description: Token inválido
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /auth/logout:
     post:
       tags: [Auth]
       summary: Logout
+      security:
+        - bearerAuth: []
       responses:
         '200':
-          description: Logout realizado
+          description: Logout realizado com sucesso
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/SuccessResponse' }
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
 
   /auth/me:
     get:
       tags: [Auth]
       summary: Dados do usuário autenticado
+      security:
+        - bearerAuth: []
       responses:
         '200':
-          description: Usuário autenticado
+          description: Dados do usuário
           content:
             application/json:
               schema:
@@ -155,20 +265,38 @@ paths:
                   - $ref: '#/components/schemas/SuccessResponse'
                   - type: object
                     properties:
-                      data: { $ref: '#/components/schemas/User' }
+                      data:
+                        $ref: '#/components/schemas/User'
 
-  # ── MANGAS ───────────────────────────────────────────
-  /mangas:
+  /contents:
     get:
-      tags: [Mangas]
-      summary: Listar mangás
+      tags: [Contents]
+      summary: Listar conteúdos
+      description: Retorna o acervo geral paginado. Pode ser filtrado por tipo e pesquisado por nome.
+      security:
+        - bearerAuth: []
       parameters:
-        - { name: per_page, in: query, schema: { type: integer, default: 15 } }
-        - { name: search, in: query, schema: { type: string }, description: Busca por nome }
-        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - name: type
+          in: query
+          description: Filtrar por tipo de conteúdo
+          schema:
+            type: string
+            enum: [manga, anime, novel]
+          example: manga
+        - name: search
+          in: query
+          description: Buscar por nome
+          schema:
+            type: string
+          example: One Piece
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
       responses:
         '200':
-          description: Lista paginada de mangás
+          description: Lista de conteúdos paginada
           content:
             application/json:
               schema:
@@ -181,26 +309,43 @@ paths:
                         properties:
                           data:
                             type: array
-                            items: { $ref: '#/components/schemas/Manga' }
-                          meta: { $ref: '#/components/schemas/PaginationMeta' }
+                            items:
+                              $ref: '#/components/schemas/Content'
+                          meta:
+                            $ref: '#/components/schemas/PaginationMeta'
 
     post:
-      tags: [Mangas]
-      summary: Criar mangá
+      tags: [Contents]
+      summary: Criar conteúdo
+      description: Cria um novo conteúdo no acervo. Suporta upload de capa via multipart/form-data.
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               type: object
-              required: [name]
+              required: [name, type]
               properties:
-                name: { type: string, example: "Naruto" }
-                cover: { type: string, nullable: true, example: "https://cdn.myanimelist.net/..." }
-                total_chapters: { type: integer, nullable: true, example: 700 }
+                name:
+                  type: string
+                  example: One Piece
+                cover:
+                  type: string
+                  format: binary
+                  description: Imagem da capa (jpeg, png, jpg, gif, webp — max 2MB)
+                type:
+                  type: string
+                  enum: [manga, anime, novel]
+                  example: manga
+                total_units:
+                  type: integer
+                  nullable: true
+                  example: 1110
       responses:
         '201':
-          description: Mangá criado
+          description: Conteúdo criado
           content:
             application/json:
               schema:
@@ -208,23 +353,30 @@ paths:
                   - $ref: '#/components/schemas/SuccessResponse'
                   - type: object
                     properties:
-                      data: { $ref: '#/components/schemas/Manga' }
+                      data:
+                        $ref: '#/components/schemas/Content'
         '422':
           description: Erro de validação
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
-  /mangas/{id}:
-    parameters:
-      - { name: id, in: path, required: true, schema: { type: integer } }
-
+  /contents/{id}:
     get:
-      tags: [Mangas]
-      summary: Buscar mangá por ID
+      tags: [Contents]
+      summary: Buscar conteúdo por ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
       responses:
         '200':
-          description: Mangá encontrado
+          description: Conteúdo encontrado
           content:
             application/json:
               schema:
@@ -232,25 +384,43 @@ paths:
                   - $ref: '#/components/schemas/SuccessResponse'
                   - type: object
                     properties:
-                      data: { $ref: '#/components/schemas/Manga' }
+                      data:
+                        $ref: '#/components/schemas/Content'
         '404':
-          description: Não encontrado
+          description: Conteúdo não encontrado
 
-    patch:
-      tags: [Mangas]
-      summary: Atualizar mangá
+    put:
+      tags: [Contents]
+      summary: Atualizar conteúdo
+      description: Atualiza um conteúdo existente. Envia multipart/form-data para substituir a capa.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
       requestBody:
         content:
-          application/json:
+          multipart/form-data:
             schema:
               type: object
               properties:
-                name: { type: string }
-                cover: { type: string, nullable: true }
-                total_chapters: { type: integer, nullable: true }
+                name:
+                  type: string
+                cover:
+                  type: string
+                  format: binary
+                type:
+                  type: string
+                  enum: [manga, anime, novel]
+                total_units:
+                  type: integer
+                  nullable: true
       responses:
         '200':
-          description: Mangá atualizado
+          description: Conteúdo atualizado
           content:
             application/json:
               schema:
@@ -258,37 +428,65 @@ paths:
                   - $ref: '#/components/schemas/SuccessResponse'
                   - type: object
                     properties:
-                      data: { $ref: '#/components/schemas/Manga' }
+                      data:
+                        $ref: '#/components/schemas/Content'
+        '404':
+          description: Conteúdo não encontrado
 
     delete:
-      tags: [Mangas]
-      summary: Remover mangá
+      tags: [Contents]
+      summary: Remover conteúdo
+      description: Remove o conteúdo e sua capa do storage.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
       responses:
         '200':
-          description: Mangá removido
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/SuccessResponse' }
+          description: Conteúdo removido
+        '404':
+          description: Conteúdo não encontrado
 
-  # ── SITES ────────────────────────────────────────────
   /sites:
     get:
       tags: [Sites]
       summary: Listar sites
+      security:
+        - bearerAuth: []
       parameters:
-        - { name: per_page, in: query, schema: { type: integer, default: 15 } }
-        - { name: search, in: query, schema: { type: string } }
-        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
       responses:
         '200':
-          description: Lista paginada de sites
+          description: Lista de sites paginada
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/SuccessResponse' }
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Site'
 
     post:
       tags: [Sites]
       summary: Criar site
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -297,8 +495,13 @@ paths:
               type: object
               required: [name, url]
               properties:
-                name: { type: string, example: "MangaDex" }
-                url: { type: string, example: "https://mangadex.org" }
+                name:
+                  type: string
+                  example: MangaDex
+                url:
+                  type: string
+                  format: uri
+                  example: https://mangadex.org
       responses:
         '201':
           description: Site criado
@@ -309,38 +512,47 @@ paths:
                   - $ref: '#/components/schemas/SuccessResponse'
                   - type: object
                     properties:
-                      data: { $ref: '#/components/schemas/Site' }
+                      data:
+                        $ref: '#/components/schemas/Site'
 
   /sites/{id}:
-    parameters:
-      - { name: id, in: path, required: true, schema: { type: integer } }
-
     get:
       tags: [Sites]
       summary: Buscar site por ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
       responses:
         '200':
           description: Site encontrado
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
-                  - type: object
-                    properties:
-                      data: { $ref: '#/components/schemas/Site' }
 
-    patch:
+    put:
       tags: [Sites]
       summary: Atualizar site
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
       requestBody:
         content:
           application/json:
             schema:
               type: object
               properties:
-                name: { type: string }
-                url: { type: string }
+                name:
+                  type: string
+                url:
+                  type: string
+                  format: uri
       responses:
         '200':
           description: Site atualizado
@@ -348,26 +560,46 @@ paths:
     delete:
       tags: [Sites]
       summary: Remover site
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
       responses:
         '200':
           description: Site removido
 
-  # ── USER MANGAS ──────────────────────────────────────
-  /user-mangas:
+  /user-contents:
     get:
-      tags: [UserMangas]
-      summary: Listar mangás do usuário autenticado
+      tags: [User Contents]
+      summary: Listar biblioteca do usuário
+      description: Retorna os conteúdos adicionados pelo usuário autenticado, com filtros por tipo e status.
+      security:
+        - bearerAuth: []
       parameters:
+        - name: type
+          in: query
+          description: Filtrar por tipo
+          schema:
+            type: string
+            enum: [manga, anime, novel]
         - name: status
           in: query
+          description: Filtrar por status
           schema:
             type: string
             enum: [reading, completed, paused, dropped, plan_to_read]
-        - { name: per_page, in: query, schema: { type: integer, default: 15 } }
-        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
       responses:
         '200':
-          description: Lista paginada
+          description: Biblioteca do usuário paginada
           content:
             application/json:
               schema:
@@ -380,31 +612,50 @@ paths:
                         properties:
                           data:
                             type: array
-                            items: { $ref: '#/components/schemas/UserManga' }
-                          meta: { $ref: '#/components/schemas/PaginationMeta' }
+                            items:
+                              $ref: '#/components/schemas/UserContent'
+                          meta:
+                            $ref: '#/components/schemas/PaginationMeta'
 
     post:
-      tags: [UserMangas]
-      summary: Adicionar mangá à lista
+      tags: [User Contents]
+      summary: Adicionar conteúdo à biblioteca
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [manga_id, site_id]
+              required: [content_id]
               properties:
-                manga_id: { type: integer, example: 1 }
-                site_id: { type: integer, example: 1 }
-                current_chapters: { type: integer, example: 0 }
-                rating: { type: number, nullable: true, example: 9.0 }
+                content_id:
+                  type: integer
+                  example: 1
+                site_id:
+                  type: integer
+                  nullable: true
+                  example: 1
+                current_units:
+                  type: integer
+                  default: 0
+                  example: 150
+                rating:
+                  type: number
+                  format: float
+                  nullable: true
+                  minimum: 0
+                  maximum: 10
+                  example: 9.5
                 status:
                   type: string
                   enum: [reading, completed, paused, dropped, plan_to_read]
-                  example: plan_to_read
+                  default: plan_to_read
+                  example: reading
       responses:
         '201':
-          description: Adicionado com sucesso
+          description: Conteúdo adicionado à biblioteca
           content:
             application/json:
               schema:
@@ -412,46 +663,65 @@ paths:
                   - $ref: '#/components/schemas/SuccessResponse'
                   - type: object
                     properties:
-                      data: { $ref: '#/components/schemas/UserManga' }
+                      data:
+                        $ref: '#/components/schemas/UserContent'
 
-  /user-mangas/{id}:
-    parameters:
-      - { name: id, in: path, required: true, schema: { type: integer } }
-
+  /user-contents/{id}:
     get:
-      tags: [UserMangas]
-      summary: Buscar item da lista por ID
+      tags: [User Contents]
+      summary: Buscar item da biblioteca por ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
       responses:
         '200':
           description: Item encontrado
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
-                  - type: object
-                    properties:
-                      data: { $ref: '#/components/schemas/UserManga' }
+        '403':
+          description: Acesso negado
+        '404':
+          description: Item não encontrado
 
     patch:
-      tags: [UserMangas]
-      summary: Atualizar status, rating ou capítulos
+      tags: [User Contents]
+      summary: Atualizar item da biblioteca
+      description: Atualiza status, rating, site ou progresso atual.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
       requestBody:
         content:
           application/json:
             schema:
               type: object
               properties:
-                manga_id: { type: integer }
-                site_id: { type: integer }
-                current_chapters: { type: integer, example: 600 }
-                rating: { type: number, nullable: true, example: 9.5 }
+                site_id:
+                  type: integer
+                  nullable: true
+                current_units:
+                  type: integer
+                  minimum: 0
+                rating:
+                  type: number
+                  format: float
+                  nullable: true
+                  minimum: 0
+                  maximum: 10
                 status:
                   type: string
                   enum: [reading, completed, paused, dropped, plan_to_read]
       responses:
         '200':
-          description: Atualizado com sucesso
+          description: Item atualizado
           content:
             application/json:
               schema:
@@ -459,24 +729,44 @@ paths:
                   - $ref: '#/components/schemas/SuccessResponse'
                   - type: object
                     properties:
-                      data: { $ref: '#/components/schemas/UserManga' }
+                      data:
+                        $ref: '#/components/schemas/UserContent'
 
     delete:
-      tags: [UserMangas]
-      summary: Remover mangá da lista
-      responses:
-        '200':
-          description: Removido com sucesso
-
-  /user-mangas/{id}/increment:
-    patch:
-      tags: [UserMangas]
-      summary: Incrementar capítulo atual em +1
+      tags: [User Contents]
+      summary: Remover item da biblioteca
+      security:
+        - bearerAuth: []
       parameters:
-        - { name: id, in: path, required: true, schema: { type: integer } }
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
       responses:
         '200':
-          description: Capítulo incrementado
+          description: Item removido da biblioteca
+        '403':
+          description: Acesso negado
+        '404':
+          description: Item não encontrado
+
+  /user-contents/{id}/increment:
+    patch:
+      tags: [User Contents]
+      summary: Incrementar progresso (+1 unidade)
+      description: Incrementa current_units em 1. Útil para o botão de +1 capítulo/episódio.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Progresso incrementado
           content:
             application/json:
               schema:
@@ -484,14 +774,9 @@ paths:
                   - $ref: '#/components/schemas/SuccessResponse'
                   - type: object
                     properties:
-                      data: { $ref: '#/components/schemas/UserManga' }
-
-tags:
-  - name: Auth
-    description: Autenticação com Google via Socialite
-  - name: Mangas
-    description: CRUD de mangás
-  - name: Sites
-    description: CRUD de sites de leitura
-  - name: UserMangas
-    description: Lista de leitura do usuário autenticado
+                      data:
+                        $ref: '#/components/schemas/UserContent'
+        '403':
+          description: Acesso negado
+        '404':
+          description: Item não encontrado

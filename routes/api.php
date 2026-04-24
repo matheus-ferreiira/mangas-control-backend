@@ -1,9 +1,10 @@
 <?php
 
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\MangaController;
+use App\Http\Controllers\ContentController;
 use App\Http\Controllers\SiteController;
-use App\Http\Controllers\UserMangaController;
+use App\Http\Controllers\UserContentController;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/google', [AuthController::class, 'googleLogin']);
@@ -12,16 +13,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
 
-    Route::apiResource('mangas', MangaController::class);
+    Route::apiResource('contents', ContentController::class);
     Route::apiResource('sites', SiteController::class);
 
-    Route::prefix('user-mangas')->group(function () {
-        Route::get('/', [UserMangaController::class, 'index']);
-        Route::post('/', [UserMangaController::class, 'store']);
-        Route::get('/{userManga}', [UserMangaController::class, 'show']);
-        Route::patch('/{userManga}', [UserMangaController::class, 'update']);
-        Route::patch('/{userManga}/increment', [UserMangaController::class, 'increment']);
-        Route::delete('/{userManga}', [UserMangaController::class, 'destroy']);
+    Route::prefix('user-contents')->group(function () {
+        Route::get('/', [UserContentController::class, 'index']);
+        Route::post('/', [UserContentController::class, 'store']);
+        Route::get('/{id}', [UserContentController::class, 'show']);
+        Route::patch('/{id}', [UserContentController::class, 'update']);
+        Route::patch('/{id}/increment', [UserContentController::class, 'increment']);
+        Route::delete('/{id}', [UserContentController::class, 'destroy']);
     });
 });
 

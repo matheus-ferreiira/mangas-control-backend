@@ -33,8 +33,8 @@ class User extends Authenticatable
         ];
     }
 
-    public function userMangas(): HasMany
+    public function userContents(): HasMany
     {
-        return $this->hasMany(UserManga::class);
+        return $this->hasMany(UserContent::class);
     }
 }
