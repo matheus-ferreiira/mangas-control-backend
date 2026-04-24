@@ -2,33 +2,36 @@
 
 namespace App\Services;
 
-use Supabase\CreateClient;
+use GuzzleHttp\Client;
 
 class SupabaseStorageService
 {
     protected $client;
-    protected $bucket = 'covers'; // ⚠️ use sem espaço!
+    protected $url;
+    protected $key;
+    protected $bucket = 'covers';
 
     public function __construct()
     {
-        $this->client = CreateClient(
-            config('services.supabase.url'),
-            config('services.supabase.key')
-        );
+        $this->client = new Client();
+        $this->url = config('services.supabase.url');
+        $this->key = config('services.supabase.key');
     }
 
     public function upload($file)
     {
-        $filename = 'covers/' . uniqid() . '.' . $file->getClientOriginalExtension();
+        $filename = uniqid() . '.' . $file->getClientOriginalExtension();
 
-        $this->client->storage->from($this->bucket)->upload(
-            $filename,
-            file_get_contents($file),
-            ['contentType' => $file->getMimeType()]
-        );
+        $path = "covers/{$filename}";
 
-        return $this->client->storage
-            ->from($this->bucket)
-            ->getPublicUrl($filename);
+        $this->client->post("{$this->url}/storage/v1/object/{$this->bucket}/{$path}", [
+            'headers' => [
+                'Authorization' => "Bearer {$this->key}",
+                'Content-Type'  => $file->getMimeType(),
+            ],
+            'body' => fopen($file->getRealPath(), 'r'),
+        ]);
+
+        return "{$this->url}/storage/v1/object/public/{$this->bucket}/{$path}";
     }
 }
