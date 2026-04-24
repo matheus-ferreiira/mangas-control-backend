@@ -13,7 +13,7 @@ class ContentResource extends JsonResource
         return [
             'id'          => $this->id,
             'name'        => $this->name,
-            'cover'       => $this->cover ? url(Storage::url($this->cover)) : null,
+            'cover'       => $this->cover,
             'type'        => $this->type,
             'total_units' => $this->total_units,
             'created_at'  => $this->created_at,

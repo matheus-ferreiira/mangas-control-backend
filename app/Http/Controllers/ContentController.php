@@ -30,7 +30,10 @@ class ContentController extends Controller
         $data = $request->validated();
 
         if ($request->hasFile('cover')) {
-            $data['cover'] = $request->file('cover')->store('covers', 'public');
+            if ($request->hasFile('cover')) {
+                $supabase = new SupabaseStorageService();
+                $data['cover'] = $supabase->upload($request->file('cover'));
+            }
         }
 
         $content = Content::create($data);
@@ -61,9 +64,9 @@ class ContentController extends Controller
 
         if ($request->hasFile('cover')) {
             if ($content->cover) {
-                Storage::disk('public')->delete($content->cover);
+                $supabase = new SupabaseStorageService();
             }
-            $data['cover'] = $request->file('cover')->store('covers', 'public');
+            $data['cover'] = $supabase->upload($request->file('cover'));
         }
 
         $content->update($data);
