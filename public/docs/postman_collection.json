@@ -1,8 +1,8 @@
 {
   "info": {
-    "name": "Manga Tracker API",
-    "_postman_id": "manga-tracker-api-v1",
-    "description": "Collection para o sistema de controle de leitura de mangás. Configure a variável `base_url` e `token` antes de usar.",
+    "name": "Content Tracker API",
+    "_postman_id": "content-tracker-api-v2",
+    "description": "Collection para o sistema de controle de leitura/visualização de mangás, animes e novels.\n\nConfigure as variáveis:\n- `base_url`: URL base da API (ex: http://localhost:8000/api)\n- `token`: Bearer token obtido após login",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -14,8 +14,7 @@
     {
       "key": "token",
       "value": "",
-      "type": "string",
-      "description": "Bearer token retornado pelo login com Google"
+      "type": "string"
     }
   ],
   "item": [
@@ -29,10 +28,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "const json = pm.response.json();",
-                  "if (json.success && json.data && json.data.access_token) {",
-                  "    pm.collectionVariables.set('token', json.data.access_token);",
-                  "    console.log('Token salvo:', json.data.access_token);",
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data && res.data.token) {",
+                  "    pm.collectionVariables.set('token', res.data.token);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -41,10 +39,13 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"token\": \"SEU_GOOGLE_ACCESS_TOKEN_AQUI\"\n}"
+              "raw": "{\n  \"token\": \"SEU_GOOGLE_ID_TOKEN_AQUI\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/auth/google",
@@ -54,106 +55,190 @@
           }
         },
         {
-          "name": "Me (usuário autenticado)",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-            "method": "GET",
-            "url": {
-              "raw": "{{base_url}}/auth/me",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "me"]
-            }
-          }
-        },
-        {
           "name": "Logout",
           "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
             "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
             "url": {
               "raw": "{{base_url}}/auth/logout",
               "host": ["{{base_url}}"],
               "path": ["auth", "logout"]
             }
           }
+        },
+        {
+          "name": "Me (usuário autenticado)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me"]
+            }
+          }
         }
       ]
     },
     {
-      "name": "Mangas",
+      "name": "Contents (Acervo)",
       "item": [
         {
-          "name": "Listar mangás",
+          "name": "Listar conteúdos",
           "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
             "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
             "url": {
-              "raw": "{{base_url}}/mangas?page=1&per_page=15",
+              "raw": "{{base_url}}/contents?type=manga&search=&page=1",
               "host": ["{{base_url}}"],
-              "path": ["mangas"],
+              "path": ["contents"],
               "query": [
-                { "key": "page", "value": "1" },
-                { "key": "per_page", "value": "15" },
-                { "key": "search", "value": "", "disabled": true }
+                { "key": "type", "value": "manga", "description": "manga | anime | novel" },
+                { "key": "search", "value": "" },
+                { "key": "page", "value": "1" }
               ]
             }
           }
         },
         {
-          "name": "Criar mangá",
+          "name": "Listar animes",
           "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"One Piece\",\n  \"cover\": \"https://cdn.myanimelist.net/images/manga/2/253146.jpg\",\n  \"total_chapters\": 1100\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/mangas",
-              "host": ["{{base_url}}"],
-              "path": ["mangas"]
-            }
-          }
-        },
-        {
-          "name": "Buscar mangá por ID",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
             "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
             "url": {
-              "raw": "{{base_url}}/mangas/1",
+              "raw": "{{base_url}}/contents?type=anime",
               "host": ["{{base_url}}"],
-              "path": ["mangas", "1"]
+              "path": ["contents"],
+              "query": [
+                { "key": "type", "value": "anime" }
+              ]
             }
           }
         },
         {
-          "name": "Atualizar mangá",
+          "name": "Listar novels",
           "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-            "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/contents?type=novel",
+              "host": ["{{base_url}}"],
+              "path": ["contents"],
+              "query": [
+                { "key": "type", "value": "novel" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Criar conteúdo (com capa)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"total_chapters\": 1110\n}"
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "One Piece", "type": "text" },
+                { "key": "type", "value": "manga", "type": "text", "description": "manga | anime | novel" },
+                { "key": "total_units", "value": "1110", "type": "text" },
+                { "key": "cover", "type": "file", "src": "", "description": "Imagem da capa (max 2MB)" }
+              ]
             },
             "url": {
-              "raw": "{{base_url}}/mangas/1",
+              "raw": "{{base_url}}/contents",
               "host": ["{{base_url}}"],
-              "path": ["mangas", "1"]
+              "path": ["contents"]
             }
           }
         },
         {
-          "name": "Deletar mangá",
+          "name": "Criar conteúdo (sem capa)",
           "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-            "method": "DELETE",
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Naruto Shippuden\",\n  \"type\": \"anime\",\n  \"total_units\": 500\n}"
+            },
             "url": {
-              "raw": "{{base_url}}/mangas/1",
+              "raw": "{{base_url}}/contents",
               "host": ["{{base_url}}"],
-              "path": ["mangas", "1"]
+              "path": ["contents"]
+            }
+          }
+        },
+        {
+          "name": "Buscar conteúdo por ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/contents/1",
+              "host": ["{{base_url}}"],
+              "path": ["contents", "1"]
+            }
+          }
+        },
+        {
+          "name": "Atualizar conteúdo",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "One Piece", "type": "text" },
+                { "key": "total_units", "value": "1115", "type": "text" },
+                { "key": "cover", "type": "file", "src": "", "description": "Nova capa (opcional)" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/contents/1",
+              "host": ["{{base_url}}"],
+              "path": ["contents", "1"]
+            }
+          }
+        },
+        {
+          "name": "Remover conteúdo",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/contents/1",
+              "host": ["{{base_url}}"],
+              "path": ["contents", "1"]
             }
           }
         }
@@ -165,15 +250,17 @@
         {
           "name": "Listar sites",
           "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
             "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
             "url": {
-              "raw": "{{base_url}}/sites?page=1&per_page=15",
+              "raw": "{{base_url}}/sites?page=1",
               "host": ["{{base_url}}"],
               "path": ["sites"],
               "query": [
-                { "key": "page", "value": "1" },
-                { "key": "per_page", "value": "15" }
+                { "key": "page", "value": "1" }
               ]
             }
           }
@@ -181,9 +268,12 @@
         {
           "name": "Criar site",
           "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"MangaDex\",\n  \"url\": \"https://mangadex.org\"\n}"
@@ -198,8 +288,11 @@
         {
           "name": "Buscar site por ID",
           "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
             "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
             "url": {
               "raw": "{{base_url}}/sites/1",
               "host": ["{{base_url}}"],
@@ -210,12 +303,15 @@
         {
           "name": "Atualizar site",
           "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-            "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"MangaDex BR\"\n}"
+              "raw": "{\n  \"name\": \"MangaDex\",\n  \"url\": \"https://mangadex.org\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/sites/1",
@@ -225,10 +321,13 @@
           }
         },
         {
-          "name": "Deletar site",
+          "name": "Remover site",
           "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
             "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
             "url": {
               "raw": "{{base_url}}/sites/1",
               "host": ["{{base_url}}"],
@@ -239,92 +338,163 @@
       ]
     },
     {
-      "name": "User Mangas",
+      "name": "User Contents (Biblioteca)",
       "item": [
         {
-          "name": "Listar minha lista",
+          "name": "Listar biblioteca",
           "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
             "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
             "url": {
-              "raw": "{{base_url}}/user-mangas?page=1&per_page=15",
+              "raw": "{{base_url}}/user-contents?type=&status=&page=1",
               "host": ["{{base_url}}"],
-              "path": ["user-mangas"],
+              "path": ["user-contents"],
               "query": [
-                { "key": "page", "value": "1" },
-                { "key": "per_page", "value": "15" },
-                { "key": "status", "value": "reading", "disabled": true, "description": "Filtrar: reading | completed | paused | dropped | plan_to_read" }
+                { "key": "type", "value": "", "description": "manga | anime | novel" },
+                { "key": "status", "value": "", "description": "reading | completed | paused | dropped | plan_to_read" },
+                { "key": "page", "value": "1" }
               ]
             }
           }
         },
         {
-          "name": "Adicionar manga à lista",
+          "name": "Filtrar por tipo (manga)",
           "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/user-contents?type=manga",
+              "host": ["{{base_url}}"],
+              "path": ["user-contents"],
+              "query": [
+                { "key": "type", "value": "manga" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filtrar por status (reading)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/user-contents?status=reading",
+              "host": ["{{base_url}}"],
+              "path": ["user-contents"],
+              "query": [
+                { "key": "status", "value": "reading" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Adicionar à biblioteca",
+          "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"manga_id\": 1,\n  \"site_id\": 1,\n  \"current_chapters\": 0,\n  \"status\": \"plan_to_read\"\n}"
+              "raw": "{\n  \"content_id\": 1,\n  \"site_id\": 1,\n  \"current_units\": 0,\n  \"status\": \"plan_to_read\",\n  \"rating\": null\n}"
             },
             "url": {
-              "raw": "{{base_url}}/user-mangas",
+              "raw": "{{base_url}}/user-contents",
               "host": ["{{base_url}}"],
-              "path": ["user-mangas"]
+              "path": ["user-contents"]
             }
           }
         },
         {
           "name": "Buscar item por ID",
           "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
             "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
             "url": {
-              "raw": "{{base_url}}/user-mangas/1",
+              "raw": "{{base_url}}/user-contents/1",
               "host": ["{{base_url}}"],
-              "path": ["user-mangas", "1"]
+              "path": ["user-contents", "1"]
             }
           }
         },
         {
-          "name": "Atualizar status / capítulos / rating",
+          "name": "Atualizar item (status/rating/progresso)",
           "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"reading\",\n  \"current_chapters\": 50,\n  \"rating\": 9.5\n}"
+              "raw": "{\n  \"status\": \"reading\",\n  \"current_units\": 150,\n  \"rating\": 9.5,\n  \"site_id\": 1\n}"
             },
             "url": {
-              "raw": "{{base_url}}/user-mangas/1",
+              "raw": "{{base_url}}/user-contents/1",
               "host": ["{{base_url}}"],
-              "path": ["user-mangas", "1"]
+              "path": ["user-contents", "1"]
             }
           }
         },
         {
-          "name": "Incrementar capítulo (+1)",
+          "name": "Incrementar +1 unidade",
           "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
             "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
             "url": {
-              "raw": "{{base_url}}/user-mangas/1/increment",
+              "raw": "{{base_url}}/user-contents/1/increment",
               "host": ["{{base_url}}"],
-              "path": ["user-mangas", "1", "increment"]
+              "path": ["user-contents", "1", "increment"]
             }
           }
         },
         {
-          "name": "Remover da lista",
+          "name": "Remover da biblioteca",
           "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
             "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
             "url": {
-              "raw": "{{base_url}}/user-mangas/1",
+              "raw": "{{base_url}}/user-contents/1",
               "host": ["{{base_url}}"],
-              "path": ["user-mangas", "1"]
+              "path": ["user-contents", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Utilitários",
+      "item": [
+        {
+          "name": "Teste de conexão DB",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/db-test",
+              "host": ["{{base_url}}"],
+              "path": ["db-test"]
             }
           }
         }
