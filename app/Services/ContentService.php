@@ -22,6 +22,6 @@ class ContentService
             $query->where('name', 'like', '%'.$filters['search'].'%');
         }
 
-        return $query->orderBy('name')->paginate(15);
+        return $query->orderBy('name');
     }
 }
