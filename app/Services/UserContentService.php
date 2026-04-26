@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Helpers\LogHelper;
 use App\Models\UserContent;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -9,6 +10,11 @@ class UserContentService
 {
     public function getUserContents(int $userId, array $filters): LengthAwarePaginator
     {
+        LogHelper::debug('Listagem da biblioteca do usuário', [
+            'user_id' => $userId,
+            'filters' => $filters,
+        ]);
+
         $query = UserContent::with(['content', 'site'])
             ->where('user_id', $userId);
 
@@ -27,6 +33,14 @@ class UserContentService
     {
         $userContent = UserContent::create(array_merge($data, ['user_id' => $userId]));
 
-        return $userContent->load(['content', 'site']);
+        $userContent->load(['content', 'site']);
+
+        LogHelper::info('Item adicionado à biblioteca', [
+            'user_id'         => $userId,
+            'user_content_id' => $userContent->id,
+            'content_id'      => $userContent->content_id,
+        ]);
+
+        return $userContent;
     }
 }

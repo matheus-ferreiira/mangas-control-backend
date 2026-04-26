@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\LogHelper;
 use App\Http\Requests\StoreSiteRequest;
 use App\Http\Requests\UpdateSiteRequest;
 use App\Http\Resources\SiteResource;
@@ -27,6 +28,12 @@ class SiteController extends Controller
     {
         $site = Site::create($request->validated());
 
+        LogHelper::info('Site criado', [
+            'site_id' => $site->id,
+            'name'    => $site->name,
+            'url'     => $site->url,
+        ]);
+
         return $this->success(new SiteResource($site), 'Site criado com sucesso', 201);
     }
 
@@ -39,12 +46,25 @@ class SiteController extends Controller
     {
         $site->update($request->validated());
 
+        LogHelper::info('Site atualizado', [
+            'site_id' => $site->id,
+            'fields'  => array_keys($request->validated()),
+        ]);
+
         return $this->success(new SiteResource($site), 'Site atualizado com sucesso');
     }
 
     public function destroy(Site $site): JsonResponse
     {
+        $id   = $site->id;
+        $name = $site->name;
+
         $site->delete();
+
+        LogHelper::info('Site removido', [
+            'site_id' => $id,
+            'name'    => $name,
+        ]);
 
         return $this->success(null, 'Site removido com sucesso');
     }

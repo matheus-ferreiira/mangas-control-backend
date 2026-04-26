@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Helpers\LogHelper;
 use App\Models\Content;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -9,6 +10,8 @@ class ContentService
 {
     public function getContents(array $filters): LengthAwarePaginator
     {
+        LogHelper::debug('Listagem de conteúdos', ['filters' => $filters]);
+
         $query = Content::query();
 
         if (!empty($filters['type'])) {
@@ -16,7 +19,7 @@ class ContentService
         }
 
         if (!empty($filters['search'])) {
-            $query->where('name', 'like', '%' . $filters['search'] . '%');
+            $query->where('name', 'like', '%'.$filters['search'].'%');
         }
 
         return $query->orderBy('name')->paginate(15);

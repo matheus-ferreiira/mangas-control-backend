@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\LogHelper;
 use App\Http\Requests\StoreUserContentRequest;
 use App\Http\Requests\UpdateUserContentRequest;
 use App\Http\Resources\UserContentResource;
@@ -60,6 +61,12 @@ class UserContentController extends Controller
         $userContent->update($request->validated());
         $userContent->load(['content', 'site']);
 
+        LogHelper::info('Item da biblioteca atualizado', [
+            'user_content_id' => $userContent->id,
+            'content_id'      => $userContent->content_id,
+            'fields'          => array_keys($request->validated()),
+        ]);
+
         return $this->success(new UserContentResource($userContent), 'Item atualizado com sucesso');
     }
 
@@ -73,8 +80,16 @@ class UserContentController extends Controller
 
         $this->ensureOwnership($userContent);
 
+        $previous = $userContent->current_units;
         $userContent->increment('current_units');
         $userContent->refresh()->load(['content', 'site']);
+
+        LogHelper::info('Progresso incrementado', [
+            'user_content_id' => $userContent->id,
+            'content_id'      => $userContent->content_id,
+            'previous'        => $previous,
+            'current'         => $userContent->current_units,
+        ]);
 
         return $this->success(new UserContentResource($userContent), 'Progresso atualizado');
     }
@@ -90,6 +105,11 @@ class UserContentController extends Controller
         $this->ensureOwnership($userContent);
 
         $userContent->delete();
+
+        LogHelper::info('Item removido da biblioteca', [
+            'user_content_id' => $id,
+            'content_id'      => $userContent->content_id,
+        ]);
 
         return $this->success(null, 'Item removido da biblioteca');
     }

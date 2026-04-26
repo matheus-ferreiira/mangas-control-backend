@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\LogHelper;
 use App\Http\Resources\UserResource;
 use App\Services\AuthService;
 use App\Traits\ApiResponse;
@@ -24,18 +25,28 @@ class AuthController extends Controller
             $result = $this->authService->handleGoogleToken($request->token);
 
             return $this->success([
-                'user' => new UserResource($result['user']),
+                'user'         => new UserResource($result['user']),
                 'access_token' => $result['token'],
-                'token_type' => 'Bearer',
+                'token_type'   => 'Bearer',
             ], 'Login realizado com sucesso');
         } catch (\Exception $e) {
+            LogHelper::warning('Tentativa de login com token inválido', [
+                'ip'         => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'reason'     => $e->getMessage(),
+            ]);
+
             return $this->error('Token do Google inválido ou expirado', [], 401);
         }
     }
 
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()->delete();
+        $user = $request->user();
+
+        $user->currentAccessToken()->delete();
+
+        LogHelper::info('Logout realizado', ['user_id' => $user->id]);
 
         return $this->success(null, 'Logout realizado com sucesso');
     }
