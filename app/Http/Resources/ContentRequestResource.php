@@ -4,21 +4,21 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
-class ContentResource extends JsonResource
+class ContentRequestResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
         return [
             'id'                => $this->id,
+            'user'              => new UserResource($this->whenLoaded('user')),
             'name'              => $this->name,
             'alternative_names' => $this->alternative_names ?? [],
-            'cover'             => $this->cover ? Storage::disk('public')->url($this->cover) : null,
             'type'              => $this->type,
+            'cover'             => $this->cover,
             'status'            => $this->status,
-            'total_units'       => $this->total_units,
-            'last_unit_update'  => $this->last_unit_update,
+            'admin'             => new UserResource($this->whenLoaded('admin')),
+            'rejection_reason'  => $this->rejection_reason,
             'created_at'        => $this->created_at,
             'updated_at'        => $this->updated_at,
         ];
