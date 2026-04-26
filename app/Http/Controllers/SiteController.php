@@ -18,7 +18,8 @@ class SiteController extends Controller
     public function index(Request $request): JsonResponse
     {
         $sites = Site::query()
-            ->when($request->search, fn ($q) => $q->where('name', 'like', "%{$request->search}%"));
+            ->when($request->search, fn ($q) => $q->where('name', 'like', "%{$request->search}%"))
+            ->paginate($request->integer('per_page', 9999));
 
         return $this->success(SiteResource::collection($sites)->response()->getData(true));
     }
