@@ -26,7 +26,7 @@ class UserContentService
             $query->whereHas('content', fn ($q) => $q->where('type', $filters['type']));
         }
 
-        return $query->orderByDesc('updated_at')->paginate(15);
+        return $query->orderByDesc('updated_at');
     }
 
     public function create(int $userId, array $data): UserContent
