@@ -5,13 +5,18 @@ info:
     API REST para controle de leitura/visualização de mangás, animes e novels.
 
     ## Autenticação
-    Utilize o endpoint `POST /auth/google` para obter um Bearer token via Google OAuth.
-    Inclua o token no header `Authorization: Bearer {token}` em todas as requisições autenticadas.
+    - **Email/Senha**: `POST /auth/register` para criar conta, `POST /auth/login` para obter token.
+    - **Google OAuth**: `POST /auth/google` para autenticar via token Google.
+    - Inclua o token no header `Authorization: Bearer {token}` em todas as requisições autenticadas.
 
     ## Upload de Imagens
     Endpoints de criação/atualização de conteúdo aceitam `multipart/form-data` para upload de capa.
-    A URL da imagem é retornada no campo `cover` do resource.
-  version: 2.0.0
+    A imagem é salva em `storage/public` e a URL completa é retornada no campo `cover`.
+
+    ## Roles
+    - `user`: acesso padrão
+    - `admin`: acesso a listagem e gestão de solicitações de conteúdo
+  version: 3.0.0
   contact:
     name: Content Tracker
 
@@ -21,9 +26,11 @@ servers:
 
 tags:
   - name: Auth
-    description: Autenticação via Google OAuth
+    description: Autenticação (email/senha e Google OAuth)
   - name: Contents
-    description: Acervo geral de conteúdos (mangás, animes, novels)
+    description: Catálogo geral de conteúdos (mangás, animes, novels)
+  - name: Content Requests
+    description: Solicitações de novos conteúdos ao catálogo
   - name: Sites
     description: Sites de leitura/visualização
   - name: User Contents
@@ -46,6 +53,9 @@ components:
         name:
           type: string
           example: Matheus Ferreira
+        username:
+          type: string
+          example: matheus_ferreira
         email:
           type: string
           format: email
@@ -71,6 +81,11 @@ components:
         name:
           type: string
           example: One Piece
+        alternative_names:
+          type: array
+          items:
+            type: string
+          example: ["ワンピース", "OP"]
         cover:
           type: string
           nullable: true
@@ -79,10 +94,60 @@ components:
           type: string
           enum: [manga, anime, novel]
           example: manga
+        status:
+          type: string
+          enum: [ongoing, completed, hiatus, cancelled]
+          example: ongoing
         total_units:
           type: integer
           nullable: true
           example: 1110
+        last_unit_update:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ContentRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user:
+          $ref: '#/components/schemas/User'
+        name:
+          type: string
+          example: Berserk
+        alternative_names:
+          type: array
+          items:
+            type: string
+          example: ["ベルセルク"]
+        type:
+          type: string
+          enum: [manga, anime, novel]
+          example: manga
+        cover:
+          type: string
+          nullable: true
+          example: https://example.com/berserk-cover.jpg
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+          example: pending
+        admin:
+          $ref: '#/components/schemas/User'
+          nullable: true
+        rejection_reason:
+          type: string
+          nullable: true
+          example: Conteúdo já existe no catálogo
         created_at:
           type: string
           format: date-time
@@ -127,6 +192,10 @@ components:
         current_units:
           type: integer
           example: 150
+        last_unit_update:
+          type: string
+          format: date-time
+          nullable: true
         rating:
           type: number
           format: float
@@ -154,16 +223,30 @@ components:
           example: 5
         per_page:
           type: integer
-          example: 15
+          example: 9999
         total:
           type: integer
           example: 72
-        from:
-          type: integer
-          example: 1
-        to:
-          type: integer
-          example: 15
+
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            user:
+              $ref: '#/components/schemas/User'
+            access_token:
+              type: string
+              example: 1|AbCdEfGhIjKlMnOpQrStUvWxYz
+            token_type:
+              type: string
+              example: Bearer
 
     SuccessResponse:
       type: object
@@ -193,6 +276,86 @@ components:
               type: string
 
 paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Registro com email e senha
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, username, email, password, password_confirmation]
+              properties:
+                name:
+                  type: string
+                  example: Matheus Ferreira
+                username:
+                  type: string
+                  example: matheus_ferreira
+                  description: Apenas letras, números e underscores
+                email:
+                  type: string
+                  format: email
+                  example: matheus@example.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: senha12345
+                password_confirmation:
+                  type: string
+                  format: password
+                  example: senha12345
+      responses:
+        '201':
+          description: Conta criada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '422':
+          description: Erro de validação (email/username já em uso)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login com email e senha
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: matheus@example.com
+                password:
+                  type: string
+                  format: password
+                  example: senha12345
+      responses:
+        '200':
+          description: Login realizado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Credenciais inválidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /auth/google:
     post:
       tags: [Auth]
@@ -216,24 +379,72 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          user:
-                            $ref: '#/components/schemas/User'
-                          token:
-                            type: string
-                            example: 1|AbCdEfGhIjKlMnOpQrStUvWxYz
+                $ref: '#/components/schemas/AuthResponse'
         '401':
           description: Token inválido
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Solicitar e-mail de recuperação de senha
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: matheus@example.com
+      responses:
+        '200':
+          description: E-mail enviado (mesmo que o e-mail não exista, por segurança)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Redefinir senha com token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, email, password, password_confirmation]
+              properties:
+                token:
+                  type: string
+                  description: Token recebido por e-mail
+                  example: abc123token
+                email:
+                  type: string
+                  format: email
+                  example: matheus@example.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: novaSenha123
+                password_confirmation:
+                  type: string
+                  format: password
+                  example: novaSenha123
+      responses:
+        '200':
+          description: Senha redefinida com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Token inválido ou expirado
 
   /auth/logout:
     post:
@@ -244,10 +455,6 @@ paths:
       responses:
         '200':
           description: Logout realizado com sucesso
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
 
   /auth/me:
     get:
@@ -271,32 +478,38 @@ paths:
   /contents:
     get:
       tags: [Contents]
-      summary: Listar conteúdos
-      description: Retorna o acervo geral paginado. Pode ser filtrado por tipo e pesquisado por nome.
+      summary: Listar catálogo
+      description: Retorna o catálogo geral com filtros por tipo, status, busca por nome/nomes alternativos e recém adicionados.
       security:
         - bearerAuth: []
       parameters:
         - name: type
           in: query
-          description: Filtrar por tipo de conteúdo
+          description: Filtrar por tipo
           schema:
             type: string
             enum: [manga, anime, novel]
-          example: manga
+        - name: status
+          in: query
+          description: Filtrar por status do conteúdo
+          schema:
+            type: string
+            enum: [ongoing, completed, hiatus, cancelled]
         - name: search
           in: query
-          description: Buscar por nome
+          description: Buscar por nome ou nomes alternativos
           schema:
             type: string
           example: One Piece
-        - name: page
+        - name: recent
           in: query
+          description: Se true, retorna apenas conteúdos adicionados nos últimos 5 dias
           schema:
-            type: integer
-            default: 1
+            type: boolean
+          example: true
       responses:
         '200':
-          description: Lista de conteúdos paginada
+          description: Lista de conteúdos
           content:
             application/json:
               schema:
@@ -305,19 +518,14 @@ paths:
                   - type: object
                     properties:
                       data:
-                        type: object
-                        properties:
-                          data:
-                            type: array
-                            items:
-                              $ref: '#/components/schemas/Content'
-                          meta:
-                            $ref: '#/components/schemas/PaginationMeta'
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Content'
 
     post:
       tags: [Contents]
-      summary: Criar conteúdo
-      description: Cria um novo conteúdo no acervo. Suporta upload de capa via multipart/form-data.
+      summary: Criar conteúdo no catálogo
+      description: Cria novo conteúdo. Verifica duplicidade por nome e nomes alternativos.
       security:
         - bearerAuth: []
       requestBody:
@@ -331,6 +539,11 @@ paths:
                 name:
                   type: string
                   example: One Piece
+                alternative_names:
+                  type: array
+                  items:
+                    type: string
+                  example: ["ワンピース"]
                 cover:
                   type: string
                   format: binary
@@ -339,6 +552,10 @@ paths:
                   type: string
                   enum: [manga, anime, novel]
                   example: manga
+                status:
+                  type: string
+                  enum: [ongoing, completed, hiatus, cancelled]
+                  default: ongoing
                 total_units:
                   type: integer
                   nullable: true
@@ -356,11 +573,7 @@ paths:
                       data:
                         $ref: '#/components/schemas/Content'
         '422':
-          description: Erro de validação
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          description: Duplicidade detectada ou erro de validação
 
   /contents/{id}:
     get:
@@ -389,10 +602,9 @@ paths:
         '404':
           description: Conteúdo não encontrado
 
-    put:
+    patch:
       tags: [Contents]
       summary: Atualizar conteúdo
-      description: Atualiza um conteúdo existente. Envia multipart/form-data para substituir a capa.
       security:
         - bearerAuth: []
       parameters:
@@ -409,34 +621,31 @@ paths:
               properties:
                 name:
                   type: string
+                alternative_names:
+                  type: array
+                  items:
+                    type: string
                 cover:
                   type: string
                   format: binary
                 type:
                   type: string
                   enum: [manga, anime, novel]
+                status:
+                  type: string
+                  enum: [ongoing, completed, hiatus, cancelled]
                 total_units:
                   type: integer
                   nullable: true
       responses:
         '200':
           description: Conteúdo atualizado
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
-                  - type: object
-                    properties:
-                      data:
-                        $ref: '#/components/schemas/Content'
         '404':
           description: Conteúdo não encontrado
 
     delete:
       tags: [Contents]
       summary: Remover conteúdo
-      description: Remove o conteúdo e sua capa do storage.
       security:
         - bearerAuth: []
       parameters:
@@ -451,6 +660,177 @@ paths:
         '404':
           description: Conteúdo não encontrado
 
+  /content-requests:
+    get:
+      tags: [Content Requests]
+      summary: Listar todas as solicitações (admin)
+      description: Requer role=admin.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
+      responses:
+        '200':
+          description: Lista de solicitações
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ContentRequest'
+        '403':
+          description: Acesso negado (não é admin)
+
+    post:
+      tags: [Content Requests]
+      summary: Criar solicitação de novo conteúdo
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, type]
+              properties:
+                name:
+                  type: string
+                  example: Berserk
+                alternative_names:
+                  type: array
+                  items:
+                    type: string
+                  example: ["ベルセルク"]
+                type:
+                  type: string
+                  enum: [manga, anime, novel]
+                  example: manga
+                cover:
+                  type: string
+                  nullable: true
+                  example: https://example.com/berserk.jpg
+      responses:
+        '201':
+          description: Solicitação enviada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ContentRequest'
+
+  /content-requests/my:
+    get:
+      tags: [Content Requests]
+      summary: Minhas solicitações
+      description: Retorna as solicitações do usuário autenticado.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
+      responses:
+        '200':
+          description: Minhas solicitações
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ContentRequest'
+
+  /content-requests/{id}/approve:
+    patch:
+      tags: [Content Requests]
+      summary: Aprovar solicitação (admin)
+      description: Aprova a solicitação e cria automaticamente o conteúdo no catálogo. Requer role=admin.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Solicitação aprovada, conteúdo criado no catálogo
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ContentRequest'
+        '403':
+          description: Acesso negado
+        '422':
+          description: Solicitação já foi processada
+
+  /content-requests/{id}/reject:
+    patch:
+      tags: [Content Requests]
+      summary: Rejeitar solicitação (admin)
+      description: Rejeita a solicitação com motivo obrigatório. Requer role=admin.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rejection_reason]
+              properties:
+                rejection_reason:
+                  type: string
+                  example: Conteúdo já existe no catálogo com nome diferente
+      responses:
+        '200':
+          description: Solicitação rejeitada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ContentRequest'
+        '403':
+          description: Acesso negado
+        '422':
+          description: Solicitação já foi processada
+
   /sites:
     get:
       tags: [Sites]
@@ -462,14 +842,9 @@ paths:
           in: query
           schema:
             type: string
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 1
       responses:
         '200':
-          description: Lista de sites paginada
+          description: Lista de sites
           content:
             application/json:
               schema:
@@ -505,15 +880,6 @@ paths:
       responses:
         '201':
           description: Site criado
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
-                  - type: object
-                    properties:
-                      data:
-                        $ref: '#/components/schemas/Site'
 
   /sites/{id}:
     get:
@@ -531,7 +897,7 @@ paths:
         '200':
           description: Site encontrado
 
-    put:
+    patch:
       tags: [Sites]
       summary: Atualizar site
       security:
@@ -576,30 +942,22 @@ paths:
     get:
       tags: [User Contents]
       summary: Listar biblioteca do usuário
-      description: Retorna os conteúdos adicionados pelo usuário autenticado, com filtros por tipo e status.
       security:
         - bearerAuth: []
       parameters:
         - name: type
           in: query
-          description: Filtrar por tipo
           schema:
             type: string
             enum: [manga, anime, novel]
         - name: status
           in: query
-          description: Filtrar por status
           schema:
             type: string
             enum: [reading, completed, paused, dropped, plan_to_read]
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 1
       responses:
         '200':
-          description: Biblioteca do usuário paginada
+          description: Biblioteca do usuário
           content:
             application/json:
               schema:
@@ -608,14 +966,9 @@ paths:
                   - type: object
                     properties:
                       data:
-                        type: object
-                        properties:
-                          data:
-                            type: array
-                            items:
-                              $ref: '#/components/schemas/UserContent'
-                          meta:
-                            $ref: '#/components/schemas/PaginationMeta'
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/UserContent'
 
     post:
       tags: [User Contents]
@@ -636,23 +989,19 @@ paths:
                 site_id:
                   type: integer
                   nullable: true
-                  example: 1
                 current_units:
                   type: integer
                   default: 0
-                  example: 150
                 rating:
                   type: number
                   format: float
                   nullable: true
                   minimum: 0
                   maximum: 10
-                  example: 9.5
                 status:
                   type: string
                   enum: [reading, completed, paused, dropped, plan_to_read]
                   default: plan_to_read
-                  example: reading
       responses:
         '201':
           description: Conteúdo adicionado à biblioteca
@@ -689,7 +1038,7 @@ paths:
     patch:
       tags: [User Contents]
       summary: Atualizar item da biblioteca
-      description: Atualiza status, rating, site ou progresso atual.
+      description: Atualiza status, rating, site ou progresso. Atualiza last_unit_update quando current_units é enviado.
       security:
         - bearerAuth: []
       parameters:
@@ -722,15 +1071,6 @@ paths:
       responses:
         '200':
           description: Item atualizado
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
-                  - type: object
-                    properties:
-                      data:
-                        $ref: '#/components/schemas/UserContent'
 
     delete:
       tags: [User Contents]
@@ -745,7 +1085,7 @@ paths:
             type: integer
       responses:
         '200':
-          description: Item removido da biblioteca
+          description: Item removido
         '403':
           description: Acesso negado
         '404':
@@ -755,7 +1095,7 @@ paths:
     patch:
       tags: [User Contents]
       summary: Incrementar progresso (+1 unidade)
-      description: Incrementa current_units em 1. Útil para o botão de +1 capítulo/episódio.
+      description: Incrementa current_units em 1 e atualiza last_unit_update.
       security:
         - bearerAuth: []
       parameters:
