@@ -8,7 +8,6 @@ use App\Http\Requests\UpdateContentRequest;
 use App\Http\Resources\ContentResource;
 use App\Models\Content;
 use App\Services\ContentService;
-use App\Services\SupabaseStorageService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,7 +21,9 @@ class ContentController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $contents = $this->contentService->getContents($request->only(['type', 'search']));
+        $contents = $this->contentService->getContents(
+            $request->only(['type', 'status', 'search', 'recent'])
+        );
 
         return $this->success(ContentResource::collection($contents));
     }
@@ -31,9 +32,12 @@ class ContentController extends Controller
     {
         $data = $request->validated();
 
+        if ($this->contentService->isDuplicate($data['name'], $data['alternative_names'] ?? [])) {
+            return $this->error('Já existe um conteúdo com este nome ou nomes alternativos', [], 422);
+        }
+
         if ($request->hasFile('cover')) {
-            $supabase      = new SupabaseStorageService();
-            $data['cover'] = $supabase->upload($request->file('cover'));
+            $data['cover'] = $request->file('cover')->store('covers', 'public');
         }
 
         $content = Content::create($data);
@@ -69,9 +73,18 @@ class ContentController extends Controller
 
         $data = $request->validated();
 
+        $checkName = $data['name'] ?? $content->name;
+        $checkAlts = $data['alternative_names'] ?? $content->alternative_names ?? [];
+
+        if ($this->contentService->isDuplicate($checkName, $checkAlts, $id)) {
+            return $this->error('Já existe um conteúdo com este nome ou nomes alternativos', [], 422);
+        }
+
         if ($request->hasFile('cover')) {
-            $supabase      = new SupabaseStorageService();
-            $data['cover'] = $supabase->upload($request->file('cover'));
+            if ($content->cover) {
+                Storage::disk('public')->delete($content->cover);
+            }
+            $data['cover'] = $request->file('cover')->store('covers', 'public');
         }
 
         $content->update($data);
