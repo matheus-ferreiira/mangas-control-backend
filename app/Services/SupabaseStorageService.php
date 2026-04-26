@@ -9,7 +9,7 @@ class SupabaseStorageService
     protected $client;
     protected $url;
     protected $key;
-    protected $bucket = 'covers';
+    protected $bucket = 'covers'; 
 
     public function __construct()
     {
