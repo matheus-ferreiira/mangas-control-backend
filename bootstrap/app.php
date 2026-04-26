@@ -15,9 +15,39 @@ return Application::configure(basePath: dirname(__DIR__))
         apiPrefix: 'api',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->api(append: [
+            \App\Http\Middleware\RequestLoggerMiddleware::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Log unexpected exceptions to the structured errors channel
+        $exceptions->report(function (\Throwable $e) {
+            $expected = [
+                AuthenticationException::class,
+                ModelNotFoundException::class,
+                NotFoundHttpException::class,
+                AccessDeniedHttpException::class,
+                \Illuminate\Validation\ValidationException::class,
+            ];
+
+            foreach ($expected as $class) {
+                if ($e instanceof $class) {
+                    return false;
+                }
+            }
+
+            \App\Helpers\LogHelper::error($e->getMessage(), [
+                'url'    => request()->fullUrl(),
+                'method' => request()->method(),
+                'ip'     => request()->ip(),
+                'input'  => collect(request()->all())
+                    ->except(['password', 'password_confirmation', 'token', 'secret'])
+                    ->toArray(),
+            ], $e);
+
+            return false;
+        });
+
         $exceptions->render(function (AuthenticationException $e, \Illuminate\Http\Request $request) {
             if ($request->is('api/*')) {
                 return response()->json([

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\LogHelper;
 use App\Http\Requests\StoreContentRequest;
 use App\Http\Requests\UpdateContentRequest;
 use App\Http\Resources\ContentResource;
@@ -31,13 +32,18 @@ class ContentController extends Controller
         $data = $request->validated();
 
         if ($request->hasFile('cover')) {
-            if ($request->hasFile('cover')) {
-                $supabase = new SupabaseStorageService();
-                $data['cover'] = $supabase->upload($request->file('cover'));
-            }
+            $supabase      = new SupabaseStorageService();
+            $data['cover'] = $supabase->upload($request->file('cover'));
         }
 
         $content = Content::create($data);
+
+        LogHelper::info('Conteúdo criado', [
+            'content_id' => $content->id,
+            'name'       => $content->name,
+            'type'       => $content->type,
+            'has_cover'  => (bool) $content->cover,
+        ]);
 
         return $this->success(new ContentResource($content), 'Conteúdo criado com sucesso', 201);
     }
@@ -64,13 +70,16 @@ class ContentController extends Controller
         $data = $request->validated();
 
         if ($request->hasFile('cover')) {
-            if ($content->cover) {
-                $supabase = new SupabaseStorageService();
-            }
+            $supabase      = new SupabaseStorageService();
             $data['cover'] = $supabase->upload($request->file('cover'));
         }
 
         $content->update($data);
+
+        LogHelper::info('Conteúdo atualizado', [
+            'content_id' => $content->id,
+            'fields'     => array_keys($data),
+        ]);
 
         return $this->success(new ContentResource($content), 'Conteúdo atualizado com sucesso');
     }
@@ -88,6 +97,11 @@ class ContentController extends Controller
         }
 
         $content->delete();
+
+        LogHelper::info('Conteúdo removido', [
+            'content_id' => $id,
+            'name'       => $content->name,
+        ]);
 
         return $this->success(null, 'Conteúdo removido com sucesso');
     }
