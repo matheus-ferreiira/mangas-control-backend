@@ -12,10 +12,13 @@ class StoreContentRequest extends BaseFormRequest
     public function rules(): array
     {
         return [
-            'name'        => ['required', 'string', 'max:255'],
-            'cover'       => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
-            'type'        => ['required', 'in:manga,anime,novel'],
-            'total_units' => ['nullable', 'integer', 'min:1'],
+            'name'                => ['required', 'string', 'max:255'],
+            'alternative_names'   => ['nullable', 'array'],
+            'alternative_names.*' => ['string', 'max:255'],
+            'cover'               => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
+            'type'                => ['required', 'in:manga,anime,novel'],
+            'status'              => ['nullable', 'in:ongoing,completed,hiatus,cancelled'],
+            'total_units'         => ['nullable', 'integer', 'min:1'],
         ];
     }
 }
