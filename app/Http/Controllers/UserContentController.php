@@ -58,13 +58,19 @@ class UserContentController extends Controller
 
         $this->ensureOwnership($userContent);
 
-        $userContent->update($request->validated());
+        $data = $request->validated();
+
+        if (array_key_exists('current_units', $data)) {
+            $data['last_unit_update'] = now();
+        }
+
+        $userContent->update($data);
         $userContent->load(['content', 'site']);
 
         LogHelper::info('Item da biblioteca atualizado', [
             'user_content_id' => $userContent->id,
             'content_id'      => $userContent->content_id,
-            'fields'          => array_keys($request->validated()),
+            'fields'          => array_keys($data),
         ]);
 
         return $this->success(new UserContentResource($userContent), 'Item atualizado com sucesso');
@@ -81,7 +87,9 @@ class UserContentController extends Controller
         $this->ensureOwnership($userContent);
 
         $previous = $userContent->current_units;
+
         $userContent->increment('current_units');
+        $userContent->update(['last_unit_update' => now()]);
         $userContent->refresh()->load(['content', 'site']);
 
         LogHelper::info('Progresso incrementado', [
