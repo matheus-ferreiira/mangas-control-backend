@@ -14,7 +14,11 @@ class ContentResource extends JsonResource
             'id'                => $this->id,
             'name'              => $this->name,
             'alternative_names' => $this->alternative_names ?? [],
-            'cover'             => $this->cover ? Storage::disk('public')->url($this->cover) : null,
+            'cover' => $this->cover
+                ? (str_starts_with($this->cover, 'http')
+                    ? $this->cover
+                    : Storage::disk('public')->url($this->cover))
+            : null,
             'type'              => $this->type,
             'status'            => $this->status,
             'total_units'       => $this->total_units,
