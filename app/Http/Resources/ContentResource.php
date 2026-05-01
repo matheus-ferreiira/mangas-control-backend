@@ -31,6 +31,7 @@ class ContentResource extends JsonResource
             'origin_type'       => $this->origin_type,
             'status'            => $this->status,
             'is_adult'          => $this->is_adult,
+            'is_in_library'     => (bool) ($this->is_in_library ?? false),
 
             // Conteúdo
             'total_units'       => $this->total_units,

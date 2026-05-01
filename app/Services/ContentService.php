@@ -6,6 +6,7 @@ use App\Helpers\LogHelper;
 use App\Helpers\NameHelper;
 use App\Models\Content;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 
 class ContentService
 {
@@ -14,11 +15,19 @@ class ContentService
     private const DEFAULT_SORT   = 'popularity';
     private const MAX_PER_PAGE   = 100;
 
-    public function getContents(array $filters): LengthAwarePaginator
+    public function getContents(array $filters, ?int $userId = null): LengthAwarePaginator
     {
         LogHelper::debug('Listagem de conteúdos', ['filters' => $filters]);
 
         $query = Content::query();
+
+        // Subquery de biblioteca: campo calculado is_in_library por usuário autenticado
+        if ($userId) {
+            $query->selectRaw(
+                'contents.*, EXISTS(SELECT 1 FROM user_contents WHERE content_id = contents.id AND user_id = ?) as is_in_library',
+                [(int) $userId]
+            );
+        }
 
         // ── Filtros básicos ───────────────────────────────────────────────────
 
@@ -84,12 +93,14 @@ class ContentService
 
         // ── Busca em nome, alternative_names e synopsis ───────────────────────
 
+        $searchTerm = null;
+
         if (! empty($filters['search'])) {
-            $term = NameHelper::normalize($filters['search']);
-            $query->where(function ($q) use ($term) {
-                $q->whereRaw('LOWER(name) LIKE ?', ["%{$term}%"])
-                  ->orWhereRaw("JSON_SEARCH(LOWER(alternative_names), 'one', ?) IS NOT NULL", ["%{$term}%"])
-                  ->orWhereRaw('LOWER(synopsis) LIKE ?', ["%{$term}%"]);
+            $searchTerm = NameHelper::normalize($filters['search']);
+            $query->where(function ($q) use ($searchTerm) {
+                $q->whereRaw('LOWER(name) LIKE ?', ["%{$searchTerm}%"])
+                  ->orWhereRaw("JSON_SEARCH(LOWER(alternative_names), 'one', ?) IS NOT NULL", ["%{$searchTerm}%"])
+                  ->orWhereRaw('LOWER(synopsis) LIKE ?', ["%{$searchTerm}%"]);
             });
         }
 
@@ -97,15 +108,28 @@ class ContentService
             $query->where('created_at', '>=', now()->subDays(5));
         }
 
-        // ── Ordenação com nulls last para colunas anuláveis ───────────────────
+        // ── Ordenação: relevância quando há busca; critério normal caso contrário ──
 
-        $sort  = in_array($filters['sort'] ?? '', self::SORTABLE) ? $filters['sort'] : self::DEFAULT_SORT;
-        $order = ($filters['order'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
-
-        if (in_array($sort, self::SORT_NULL_LAST)) {
-            $query->orderByRaw("CASE WHEN {$sort} IS NULL THEN 1 ELSE 0 END, {$sort} {$order}");
+        if ($searchTerm) {
+            // Prioridade: começa com o termo → contém → alt names → synopsis
+            $query->orderByRaw(
+                "CASE
+                    WHEN LOWER(name) LIKE ?           THEN 1
+                    WHEN LOWER(name) LIKE ?            THEN 2
+                    WHEN JSON_SEARCH(LOWER(alternative_names), 'one', ?) IS NOT NULL THEN 3
+                    ELSE 4
+                END, COALESCE(score, 0) DESC",
+                ["{$searchTerm}%", "%{$searchTerm}%", "%{$searchTerm}%"]
+            );
         } else {
-            $query->orderBy($sort, $order);
+            $sort  = in_array($filters['sort'] ?? '', self::SORTABLE) ? $filters['sort'] : self::DEFAULT_SORT;
+            $order = ($filters['order'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
+
+            if (in_array($sort, self::SORT_NULL_LAST)) {
+                $query->orderByRaw("CASE WHEN {$sort} IS NULL THEN 1 ELSE 0 END, {$sort} {$order}");
+            } else {
+                $query->orderBy($sort, $order);
+            }
         }
 
         // ── Paginação ─────────────────────────────────────────────────────────

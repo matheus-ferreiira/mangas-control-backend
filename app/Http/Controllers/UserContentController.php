@@ -86,6 +86,13 @@ class UserContentController extends Controller
 
         $this->ensureOwnership($userContent);
 
+        $userContent->load('content');
+        $total = $userContent->content?->total_units;
+
+        if ($total !== null && ($userContent->current_units + 1) > $total) {
+            return $this->error("Você já atingiu o total de episódios/capítulos ({$total}).", [], 422);
+        }
+
         $previous = $userContent->current_units;
 
         $userContent->increment('current_units');
