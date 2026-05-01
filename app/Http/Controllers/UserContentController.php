@@ -37,7 +37,7 @@ class UserContentController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $userContent = UserContent::with(['content', 'site'])->find($id);
+        $userContent = UserContent::with(['content', 'site', 'userSite'])->find($id);
 
         if (!$userContent) {
             return $this->error('Item não encontrado', [], 404);
@@ -65,7 +65,7 @@ class UserContentController extends Controller
         }
 
         $userContent->update($data);
-        $userContent->load(['content', 'site']);
+        $userContent->load(['content', 'site', 'userSite']);
 
         LogHelper::info('Item da biblioteca atualizado', [
             'user_content_id' => $userContent->id,
@@ -90,7 +90,7 @@ class UserContentController extends Controller
 
         $userContent->increment('current_units');
         $userContent->update(['last_unit_update' => now()]);
-        $userContent->refresh()->load(['content', 'site']);
+        $userContent->refresh()->load(['content', 'site', 'userSite']);
 
         LogHelper::info('Progresso incrementado', [
             'user_content_id' => $userContent->id,

@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Http\Resources\UserSiteResource;
 
 class UserContentResource extends JsonResource
 {
@@ -14,6 +15,7 @@ class UserContentResource extends JsonResource
             'user_id'          => $this->user_id,
             'content'          => new ContentResource($this->whenLoaded('content')),
             'site'             => new SiteResource($this->whenLoaded('site')),
+            'user_site'        => new UserSiteResource($this->whenLoaded('userSite')),
             'current_units'    => $this->current_units,
             'last_unit_update' => $this->last_unit_update,
             'rating'           => $this->rating,

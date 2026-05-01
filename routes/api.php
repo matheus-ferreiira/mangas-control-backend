@@ -6,6 +6,7 @@ use App\Http\Controllers\ContentRequestController;
 use App\Http\Controllers\LogController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\UserContentController;
+use App\Http\Controllers\UserSiteController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
@@ -24,6 +25,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('contents', ContentController::class);
     Route::apiResource('sites', SiteController::class);
+
+    // Sites por usuário
+    Route::prefix('user-sites')->group(function () {
+        Route::get('/', [UserSiteController::class, 'index']);
+        Route::post('/', [UserSiteController::class, 'store']);
+        Route::get('/{id}', [UserSiteController::class, 'show']);
+        Route::put('/{user_site}', [UserSiteController::class, 'update']);
+        Route::delete('/{id}', [UserSiteController::class, 'destroy']);
+    });
 
     Route::prefix('user-contents')->group(function () {
         Route::get('/', [UserContentController::class, 'index']);

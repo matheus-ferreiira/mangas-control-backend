@@ -1,7 +1,20 @@
 {
   "permissions": {
     "allow": [
-      "Bash(php artisan *)"
+      "Bash(php artisan *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(php -l app/Services/ExternalContentService.php)",
+      "Bash(php -l app/Console/Commands/ImportContentsCommand.php)",
+      "Bash(php -l app/Services/ContentService.php)",
+      "Bash(php -l app/Http/Controllers/ContentController.php)",
+      "Bash(php -l app/Http/Resources/ContentResource.php)",
+      "Bash(php -l app/Models/Content.php)",
+      "Bash(php -l database/migrations/2026_05_01_000001_create_user_sites_table.php)",
+      "Bash(php -l database/migrations/2026_05_01_000002_add_user_site_id_to_user_contents_table.php)",
+      "Bash(php -l app/Models/UserSite.php)",
+      "Bash(php -l app/Models/User.php)",
+      "Bash(php -l app/Models/UserContent.php)"
     ]
   }
 }
