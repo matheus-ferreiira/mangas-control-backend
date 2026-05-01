@@ -34,11 +34,12 @@ class ContentController extends Controller
             'language', 'country', 'is_adult',
         ]);
 
+        $userId   = auth()->id();
         $version  = Cache::get(self::CACHE_VERSION_KEY, 0);
-        $cacheKey = "api.contents.v{$version}." . md5(json_encode($filters) . '_p' . $request->get('page', 1));
+        $cacheKey = "api.contents.v{$version}.u{$userId}." . md5(json_encode($filters) . '_p' . $request->get('page', 1));
 
-        $data = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($filters, $request) {
-            $result = $this->contentService->getContents($filters);
+        $data = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($filters, $request, $userId) {
+            $result = $this->contentService->getContents($filters, $userId);
 
             return [
                 'items' => collect($result->items())
@@ -91,7 +92,11 @@ class ContentController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $content = Content::find($id);
+        $userId  = auth()->id();
+        $content = Content::selectRaw(
+            'contents.*, EXISTS(SELECT 1 FROM user_contents WHERE content_id = contents.id AND user_id = ?) as is_in_library',
+            [(int) $userId]
+        )->find($id);
 
         if (! $content) {
             return $this->error('Conteúdo não encontrado', [], 404);

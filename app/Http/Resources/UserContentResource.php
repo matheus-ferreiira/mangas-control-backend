@@ -17,11 +17,26 @@ class UserContentResource extends JsonResource
             'site'             => new SiteResource($this->whenLoaded('site')),
             'user_site'        => new UserSiteResource($this->whenLoaded('userSite')),
             'current_units'    => $this->current_units,
+            'progress_percent' => $this->computeProgressPercent(),
             'last_unit_update' => $this->last_unit_update,
             'rating'           => $this->rating,
             'status'           => $this->status,
             'created_at'       => $this->created_at,
             'updated_at'       => $this->updated_at,
         ];
+    }
+
+    private function computeProgressPercent(): ?float
+    {
+        $current = $this->current_units;
+        $total   = $this->resource->relationLoaded('content')
+            ? ($this->resource->content?->total_units ?? null)
+            : null;
+
+        if ($current === null || ! $total || $total <= 0) {
+            return null;
+        }
+
+        return round(min(($current / $total) * 100, 100), 1);
     }
 }

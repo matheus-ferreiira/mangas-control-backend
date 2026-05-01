@@ -17,7 +17,11 @@
       "Bash(php -l app/Models/UserContent.php)",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\asdas\\\\Documents\\\\Projetos Pessoais\\\\mangas\\\\back\" -Directory)",
       "Bash(Select-Object Name)",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "Bash(Get-ChildItem \"c:\\\\Users\\\\asdas\\\\Documents\\\\Projetos Pessoais\\\\mangas\\\\back\\\\database\\\\migrations\")",
+      "Bash(Sort-Object)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\asdas\\\\Documents\\\\Projetos Pessoais\\\\mangas\\\\\" -Force)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\asdas\\\\Documents\\\\Projetos Pessoais\\\\mangas\\\\front\\\\src\\\\\" -Recurse -Force | Where-Object { $_.PSIsContainer } | Sort-Object FullName)"
     ]
   }
 }
