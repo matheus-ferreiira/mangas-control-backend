@@ -28,6 +28,7 @@ class ContentResource extends JsonResource
 
             // Classificação
             'type'              => $this->type,
+            'origin_type'       => $this->origin_type,
             'status'            => $this->status,
             'is_adult'          => $this->is_adult,
 

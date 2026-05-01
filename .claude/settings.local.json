@@ -14,7 +14,10 @@
       "Bash(php -l database/migrations/2026_05_01_000002_add_user_site_id_to_user_contents_table.php)",
       "Bash(php -l app/Models/UserSite.php)",
       "Bash(php -l app/Models/User.php)",
-      "Bash(php -l app/Models/UserContent.php)"
+      "Bash(php -l app/Models/UserContent.php)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\asdas\\\\Documents\\\\Projetos Pessoais\\\\mangas\\\\back\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(xargs grep *)"
     ]
   }
 }

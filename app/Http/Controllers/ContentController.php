@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\LogHelper;
+use App\Helpers\NameHelper;
 use App\Http\Requests\StoreContentRequest;
 use App\Http\Requests\UpdateContentRequest;
 use App\Http\Resources\ContentResource;
@@ -62,6 +63,10 @@ class ContentController extends Controller
     {
         $data = $request->validated();
 
+        if (isset($data['alternative_names'])) {
+            $data['alternative_names'] = NameHelper::normalizeList($data['alternative_names']);
+        }
+
         if ($this->contentService->isDuplicate($data['name'], $data['alternative_names'] ?? [])) {
             return $this->error('Já existe um conteúdo com este nome ou nomes alternativos', [], 422);
         }
@@ -104,6 +109,10 @@ class ContentController extends Controller
         }
 
         $data = $request->validated();
+
+        if (isset($data['alternative_names'])) {
+            $data['alternative_names'] = NameHelper::normalizeList($data['alternative_names']);
+        }
 
         $checkName = $data['name'] ?? $content->name;
         $checkAlts = $data['alternative_names'] ?? $content->alternative_names ?? [];

@@ -13,7 +13,7 @@ class StoreContentRequest extends BaseFormRequest
     {
         return [
             'name'                => ['required', 'string', 'max:255'],
-            'alternative_names'   => ['nullable', 'array'],
+            'alternative_names'   => ['nullable', 'array', 'max:50'],
             'alternative_names.*' => ['string', 'max:255'],
             'cover'               => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
             'type'                => ['required', 'in:manga,anime,novel,movie,tv'],

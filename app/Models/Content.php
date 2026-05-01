@@ -31,6 +31,7 @@ class Content extends Model
         'duration',
         'trailer_url',
         'country',
+        'origin_type',
     ];
 
     protected $casts = [
