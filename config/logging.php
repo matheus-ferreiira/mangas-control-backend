@@ -18,6 +18,10 @@ return [
     // Whether to log all HTTP requests (set LOG_REQUESTS=true in .env to enable)
     'log_requests' => env('LOG_REQUESTS', false),
 
+    // Log viewer web UI credentials (Basic Auth)
+    'viewer_user'     => env('LOG_VIEWER_USER', 'admin'),
+    'viewer_password' => env('LOG_VIEWER_PASSWORD'),
+
     'channels' => [
 
         // Default stack: daily file + stderr (captured by Railway/cloud platforms)

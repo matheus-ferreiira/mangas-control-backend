@@ -45,6 +45,11 @@ class User extends Authenticatable
         return $this->hasMany(UserContent::class);
     }
 
+    public function userSites(): HasMany
+    {
+        return $this->hasMany(UserSite::class);
+    }
+
     public function contentRequests(): HasMany
     {
         return $this->hasMany(ContentRequest::class);

@@ -11,21 +11,51 @@ use App\Services\ContentService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 class ContentController extends Controller
 {
     use ApiResponse;
 
+    // Chave de versão: incrementada em CUD para invalidar todas as caches de listagem
+    private const CACHE_VERSION_KEY = 'contents.cache_version';
+    private const CACHE_TTL         = 60; // segundos
+
     public function __construct(private ContentService $contentService) {}
 
     public function index(Request $request): JsonResponse
     {
-        $contents = $this->contentService->getContents(
-            $request->only(['type', 'status', 'search', 'recent'])
-        );
+        $filters = $request->only([
+            'type', 'status', 'search', 'genres', 'year', 'year_min', 'year_max',
+            'sort', 'order', 'per_page', 'recent',
+            'rating_min', 'rating_max', 'votes_min',
+            'language', 'country', 'is_adult',
+        ]);
 
-        return $this->success(ContentResource::collection($contents));
+        $version  = Cache::get(self::CACHE_VERSION_KEY, 0);
+        $cacheKey = "api.contents.v{$version}." . md5(json_encode($filters) . '_p' . $request->get('page', 1));
+
+        $data = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($filters, $request) {
+            $result = $this->contentService->getContents($filters);
+
+            return [
+                'items' => collect($result->items())
+                    ->map(fn ($c) => (new ContentResource($c))->toArray($request))
+                    ->values()
+                    ->all(),
+                'meta'  => [
+                    'current_page' => $result->currentPage(),
+                    'last_page'    => $result->lastPage(),
+                    'per_page'     => $result->perPage(),
+                    'total'        => $result->total(),
+                    'from'         => $result->firstItem(),
+                    'to'           => $result->lastItem(),
+                ],
+            ];
+        });
+
+        return $this->success($data);
     }
 
     public function store(StoreContentRequest $request): JsonResponse
@@ -42,6 +72,8 @@ class ContentController extends Controller
 
         $content = Content::create($data);
 
+        Cache::increment(self::CACHE_VERSION_KEY);
+
         LogHelper::info('Conteúdo criado', [
             'content_id' => $content->id,
             'name'       => $content->name,
@@ -56,7 +88,7 @@ class ContentController extends Controller
     {
         $content = Content::find($id);
 
-        if (!$content) {
+        if (! $content) {
             return $this->error('Conteúdo não encontrado', [], 404);
         }
 
@@ -67,7 +99,7 @@ class ContentController extends Controller
     {
         $content = Content::find($id);
 
-        if (!$content) {
+        if (! $content) {
             return $this->error('Conteúdo não encontrado', [], 404);
         }
 
@@ -81,13 +113,15 @@ class ContentController extends Controller
         }
 
         if ($request->hasFile('cover')) {
-            if ($content->cover) {
+            if ($content->cover && ! str_starts_with($content->cover, 'http')) {
                 Storage::disk('public')->delete($content->cover);
             }
             $data['cover'] = $request->file('cover')->store('covers', 'public');
         }
 
         $content->update($data);
+
+        Cache::increment(self::CACHE_VERSION_KEY);
 
         LogHelper::info('Conteúdo atualizado', [
             'content_id' => $content->id,
@@ -101,15 +135,17 @@ class ContentController extends Controller
     {
         $content = Content::find($id);
 
-        if (!$content) {
+        if (! $content) {
             return $this->error('Conteúdo não encontrado', [], 404);
         }
 
-        if ($content->cover) {
+        if ($content->cover && ! str_starts_with($content->cover, 'http')) {
             Storage::disk('public')->delete($content->cover);
         }
 
         $content->delete();
+
+        Cache::increment(self::CACHE_VERSION_KEY);
 
         LogHelper::info('Conteúdo removido', [
             'content_id' => $id,

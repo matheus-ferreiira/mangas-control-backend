@@ -11,6 +11,7 @@ class UserContent extends Model
         'user_id',
         'content_id',
         'site_id',
+        'user_site_id',
         'current_units',
         'last_unit_update',
         'rating',
@@ -36,5 +37,10 @@ class UserContent extends Model
     public function site(): BelongsTo
     {
         return $this->belongsTo(Site::class);
+    }
+
+    public function userSite(): BelongsTo
+    {
+        return $this->belongsTo(UserSite::class);
     }
 }

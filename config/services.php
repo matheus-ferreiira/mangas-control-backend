@@ -34,4 +34,15 @@ return [
         'key' => env('SUPABASE_KEY'),
     ],
 
+    /*
+     * TMDb API — gere sua chave em:
+     * 1. Acesse https://www.themoviedb.org e crie uma conta
+     * 2. Vá em Settings → API → Create (Developer)
+     * 3. Copie a "API Key (v3 auth)" e adicione no .env:
+     *    TMDB_API_KEY=sua_chave_aqui
+     */
+    'tmdb' => [
+        'key' => env('TMDB_API_KEY'),
+    ],
+
 ];

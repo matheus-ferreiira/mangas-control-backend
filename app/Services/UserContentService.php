@@ -15,7 +15,7 @@ class UserContentService
             'filters' => $filters,
         ]);
 
-        $query = UserContent::with(['content', 'site'])
+        $query = UserContent::with(['content', 'site', 'userSite'])
             ->where('user_id', $userId);
 
         if (!empty($filters['status'])) {
@@ -33,7 +33,7 @@ class UserContentService
     {
         $userContent = UserContent::create(array_merge($data, ['user_id' => $userId]));
 
-        $userContent->load(['content', 'site']);
+        $userContent->load(['content', 'site', 'userSite']);
 
         LogHelper::info('Item adicionado à biblioteca', [
             'user_id'         => $userId,

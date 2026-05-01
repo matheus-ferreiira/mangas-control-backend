@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use Illuminate\Validation\Rule;
+
 class StoreUserContentRequest extends BaseFormRequest
 {
     public function authorize(): bool
@@ -14,6 +16,11 @@ class StoreUserContentRequest extends BaseFormRequest
         return [
             'content_id'    => ['required', 'integer', 'exists:contents,id'],
             'site_id'       => ['nullable', 'integer', 'exists:sites,id'],
+            'user_site_id'  => [
+                'nullable',
+                'integer',
+                Rule::exists('user_sites', 'id')->where('user_id', auth()->id()),
+            ],
             'current_units' => ['nullable', 'integer', 'min:0'],
             'rating'        => ['nullable', 'numeric', 'min:0', 'max:10'],
             'status'        => ['nullable', 'in:reading,completed,paused,dropped,plan_to_read'],
