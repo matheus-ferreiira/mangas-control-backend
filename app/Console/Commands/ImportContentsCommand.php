@@ -10,6 +10,8 @@ class ImportContentsCommand extends Command
 {
     protected $signature = 'contents:import
                             {--type=          : Tipo: anime, manga, movie, tv (omita para importar tudo)}
+                            {--origin=        : Filtrar por origem (manga, manhwa, manhua) — aplica-se apenas ao tipo manga}
+                            {--priority=      : Priorizar por origem (manga, manhwa, manhua) — importa tudo, mas itens da origem escolhida primeiro}
                             {--pageStart=1    : Página inicial}
                             {--pageEnd=5      : Página final}
                             {--perPage=25     : Itens por página — Jikan max 25; ignorado na TMDb (fixo em 20)}
@@ -24,6 +26,8 @@ class ImportContentsCommand extends Command
     public function handle(ExternalContentService $service): int
     {
         $type        = $this->option('type');
+        $origin      = $this->option('origin') ?: null;
+        $priority    = $this->option('priority') ?: null;
         $pageStart   = (int) $this->option('pageStart');
         $pageEnd     = (int) $this->option('pageEnd');
         $perPage     = min((int) $this->option('perPage'), 25);
@@ -31,10 +35,28 @@ class ImportContentsCommand extends Command
         $force       = (bool) $this->option('force');
         $withDetails = (bool) $this->option('details');
 
+        $validOrigins = ['manga', 'manhwa', 'manhua'];
+
         if ($type && ! in_array($type, ['anime', 'manga', 'movie', 'tv'])) {
             $this->error("Tipo inválido: \"{$type}\". Use: anime, manga, movie ou tv.");
 
             return Command::FAILURE;
+        }
+
+        if ($origin && ! in_array($origin, $validOrigins)) {
+            $this->error("Origem inválida: \"{$origin}\". Use: manga, manhwa ou manhua.");
+
+            return Command::FAILURE;
+        }
+
+        if ($priority && ! in_array($priority, $validOrigins)) {
+            $this->error("Prioridade inválida: \"{$priority}\". Use: manga, manhwa ou manhua.");
+
+            return Command::FAILURE;
+        }
+
+        if (($origin || $priority) && $type && $type !== 'manga') {
+            $this->warn("--origin e --priority só se aplicam ao tipo manga; serão ignorados para \"{$type}\".");
         }
 
         if ($pageStart < 1 || $pageEnd < $pageStart) {
@@ -51,6 +73,14 @@ class ImportContentsCommand extends Command
             $this->warn('Modo --details ativo: uma requisição extra por item da TMDb (mais lento).');
         }
 
+        if ($origin) {
+            $this->info("[INFO] Filtro ativo: origin={$origin}");
+        }
+
+        if ($priority) {
+            $this->info("[INFO] Prioridade ativa: {$priority}");
+        }
+
         $log   = fn (string $message) => $this->line($message);
         $types = $type ? [$type] : ['anime', 'manga', 'movie', 'tv'];
         $total = 0;
@@ -63,7 +93,7 @@ class ImportContentsCommand extends Command
 
             $imported = match ($t) {
                 'anime' => $service->importAnime($log, $start, $end, $perPage, $force, $withDetails),
-                'manga' => $service->importManga($log, $start, $end, $perPage, $force, $withDetails),
+                'manga' => $service->importManga($log, $start, $end, $perPage, $force, $withDetails, $origin, $priority),
                 'movie' => $service->importMovies($log, $start, $end, $force, $withDetails),
                 'tv'    => $service->importTV($log, $start, $end, $force, $withDetails),
             };

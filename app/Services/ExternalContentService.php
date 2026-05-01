@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Helpers\NameHelper;
 use App\Models\Content;
 use Carbon\Carbon;
 use Illuminate\Support\Arr;
@@ -56,7 +57,7 @@ class ExternalContentService
                         'external_id'       => (string) ($item['mal_id'] ?? ''),
                         'source'            => 'jikan',
                         'name'              => $name,
-                        'alternative_names' => $this->extractAltNames($item),
+                        'alternative_names' => $this->extractAltNames($item, $name),
                         'cover'             => $item['images']['jpg']['large_image_url'] ?? null,
                         'background'        => null,
                         'type'              => 'anime',
@@ -108,7 +109,9 @@ class ExternalContentService
         int $pageEnd      = 5,
         int $perPage      = 25,
         bool $force       = false,
-        bool $withDetails = false
+        bool $withDetails = false,
+        ?string $origin   = null,
+        ?string $priority = null,
     ): int {
         $imported = 0;
 
@@ -119,13 +122,29 @@ class ExternalContentService
                 break;
             }
 
-            foreach ($result['data'] as $item) {
+            // Prioridade: itens da origem preferida sobem para o topo da página
+            $items = $result['data'];
+            if ($priority) {
+                $priorityItems = array_values(array_filter($items, fn ($i) => $this->detectOriginType($i) === $priority));
+                $normalItems   = array_values(array_filter($items, fn ($i) => $this->detectOriginType($i) !== $priority));
+                $items         = array_merge($priorityItems, $normalItems);
+            }
+
+            foreach ($items as $item) {
                 $name = trim($item['title'] ?? '');
                 if (! $name) {
                     continue;
                 }
 
                 try {
+                    $originType = $this->detectOriginType($item);
+
+                    // Filtro: pula itens que não pertencem à origem solicitada
+                    if ($origin && $originType !== $origin) {
+                        $log("[SKIP][origin] {$name} (detectado: {$originType}, esperado: {$origin})");
+                        continue;
+                    }
+
                     $rating     = isset($item['score']) ? (float) $item['score'] : null;
                     $votesCount = $item['scored_by'] ?? null;
 
@@ -133,7 +152,8 @@ class ExternalContentService
                         'external_id'       => (string) ($item['mal_id'] ?? ''),
                         'source'            => 'jikan',
                         'name'              => $name,
-                        'alternative_names' => $this->extractAltNames($item),
+                        'alternative_names' => $this->extractAltNames($item, $name),
+                        'origin_type'       => $originType,
                         'cover'             => $item['images']['jpg']['large_image_url'] ?? null,
                         'background'        => null,
                         'type'              => 'manga',
@@ -226,7 +246,7 @@ class ExternalContentService
                         'external_id'       => (string) $item['id'],
                         'source'            => 'tmdb',
                         'name'              => $name,
-                        'alternative_names' => [],
+                        'alternative_names' => $this->extractTmdbAltNames($item, $name),
                         'cover'             => $this->tmdbImage($item['poster_path'] ?? null),
                         'background'        => $this->tmdbBackdrop($item['backdrop_path'] ?? null),
                         'type'              => 'movie',
@@ -323,7 +343,7 @@ class ExternalContentService
                         'external_id'       => (string) $item['id'],
                         'source'            => 'tmdb',
                         'name'              => $name,
-                        'alternative_names' => [],
+                        'alternative_names' => $this->extractTmdbAltNames($item, $name),
                         'cover'             => $this->tmdbImage($item['poster_path'] ?? null),
                         'background'        => $this->tmdbBackdrop($item['backdrop_path'] ?? null),
                         'type'              => 'tv',
@@ -379,23 +399,24 @@ class ExternalContentService
         $name     = $data['name'];
         $source   = $data['source'] ?? null;
         $extId    = $data['external_id'] ?? null;
+        $label    = $data['origin_type'] ?? $type;
         $existing = $this->findExisting($name, $altNames, $source, $extId);
 
         if ($existing) {
             if (! $force) {
-                $log("[SKIP][{$type}] {$name} já existe");
+                $log("[SKIP][{$label}] {$name} já existe");
 
                 return 0;
             }
 
             $existing->update(Arr::except($data, self::FORCE_SKIP));
-            $log("[UPDATE][{$type}] {$name} atualizado");
+            $log("[UPDATE][{$label}] {$name} atualizado");
 
             return 1;
         }
 
         Content::create($data);
-        $log("[OK][{$type}] {$name} inserido");
+        $log("[OK][{$label}] {$name} inserido");
 
         return 1;
     }
@@ -422,27 +443,23 @@ class ExternalContentService
         }
 
         // 2ª prioridade: nome normalizado
-        $record = Content::whereRaw('LOWER(TRIM(name)) = ?', [strtolower(trim($name))])->first();
+        $record = Content::whereRaw('LOWER(TRIM(name)) = ?', [NameHelper::normalize($name)])->first();
         if ($record) {
             return $record;
         }
 
-        // 3ª prioridade: nomes alternativos (original + lowercase)
-        $candidates = [];
+        // 3ª prioridade: nomes alternativos (busca case-insensitive via JSON_SEARCH)
         foreach ($altNames as $alt) {
-            $alt = trim($alt);
-            if (! $alt) {
+            $normalized = NameHelper::normalize($alt);
+            if (! $normalized) {
                 continue;
             }
-            $candidates[] = $alt;
-            $lower = strtolower($alt);
-            if ($lower !== $alt) {
-                $candidates[] = $lower;
-            }
-        }
 
-        foreach (array_unique($candidates) as $candidate) {
-            $record = Content::whereJsonContains('alternative_names', $candidate)->first();
+            $record = Content::whereRaw(
+                "JSON_SEARCH(LOWER(alternative_names), 'one', ?) IS NOT NULL",
+                [$normalized]
+            )->first();
+
             if ($record) {
                 return $record;
             }
@@ -555,12 +572,77 @@ class ExternalContentService
     // Utilitários de extração e mapeamento
     // ─────────────────────────────────────────────────────────────────────────
 
-    private function extractAltNames(array $item): array
+    private function extractAltNames(array $item, string $mainName = ''): array
     {
-        return array_values(array_filter([
+        $candidates = array_filter([
             isset($item['title_english'])  ? trim($item['title_english'])  : null,
             isset($item['title_japanese']) ? trim($item['title_japanese']) : null,
-        ]));
+        ]);
+
+        if ($mainName) {
+            $normalizedMain = NameHelper::normalize($mainName);
+            $candidates     = array_filter($candidates, fn ($a) => NameHelper::normalize($a) !== $normalizedMain);
+        }
+
+        return NameHelper::normalizeList(array_values($candidates));
+    }
+
+    /** Extrai nomes alternativos de itens TMDb (original_title / original_name). */
+    private function extractTmdbAltNames(array $item, string $mainName): array
+    {
+        $normalizedMain = NameHelper::normalize($mainName);
+
+        $candidates = array_filter([
+            isset($item['original_title']) ? trim($item['original_title']) : null,
+            isset($item['original_name'])  ? trim($item['original_name'])  : null,
+        ]);
+
+        $candidates = array_filter($candidates, fn ($a) => NameHelper::normalize($a) !== $normalizedMain);
+
+        return NameHelper::normalizeList(array_values($candidates));
+    }
+
+    /**
+     * Detecta a origem do conteúdo (manga / manhwa / manhua) em 4 níveis:
+     *  1. Campo type da API (Manhwa / Manhua) — mais confiável
+     *  2. Caracteres Unicode no título japonês (Hangul → manhwa, CJK → manhua)
+     *  3. Publishers coreanos nas serializações
+     *  4. Fallback → manga
+     */
+    private function detectOriginType(array $item): string
+    {
+        // Regra 1 — tipo explícito da API
+        $apiType = $item['type'] ?? '';
+        if ($apiType === 'Manhwa') {
+            return 'manhwa';
+        }
+        if ($apiType === 'Manhua') {
+            return 'manhua';
+        }
+
+        // Regra 2 — caracteres Unicode no título japonês
+        $titleJp = $item['title_japanese'] ?? '';
+        if ($titleJp) {
+            // Hangul (U+AC00–U+D7AF) → coreano
+            if (preg_match('/[\x{AC00}-\x{D7AF}]/u', $titleJp)) {
+                return 'manhwa';
+            }
+            // CJK Unified Ideographs (U+4E00–U+9FFF) → chinês
+            if (preg_match('/[\x{4E00}-\x{9FFF}]/u', $titleJp)) {
+                return 'manhua';
+            }
+        }
+
+        // Regra 3 — publishers coreanos nas serializações
+        $koreanPublishers = config('content.origin_detection.korean_publishers', []);
+        foreach ($item['serializations'] ?? [] as $serial) {
+            if (in_array($serial['name'] ?? '', $koreanPublishers, true)) {
+                return 'manhwa';
+            }
+        }
+
+        // Regra 4 — fallback
+        return 'manga';
     }
 
     private function extractJikanGenres(array $item): array

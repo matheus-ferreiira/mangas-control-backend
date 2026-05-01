@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Helpers\LogHelper;
+use App\Helpers\NameHelper;
 use App\Models\Content;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -84,11 +85,10 @@ class ContentService
         // ── Busca em nome, alternative_names e synopsis ───────────────────────
 
         if (! empty($filters['search'])) {
-            $term = strtolower(trim($filters['search']));
+            $term = NameHelper::normalize($filters['search']);
             $query->where(function ($q) use ($term) {
-                // CAST AS CHAR é compatível com MySQL e SQLite (TEXT affinity)
                 $q->whereRaw('LOWER(name) LIKE ?', ["%{$term}%"])
-                  ->orWhereRaw('LOWER(CAST(alternative_names AS CHAR)) LIKE ?', ["%{$term}%"])
+                  ->orWhereRaw("JSON_SEARCH(LOWER(alternative_names), 'one', ?) IS NOT NULL", ["%{$term}%"])
                   ->orWhereRaw('LOWER(synopsis) LIKE ?', ["%{$term}%"]);
             });
         }
@@ -123,21 +123,20 @@ class ContentService
             $query->where('id', '!=', $excludeId);
         }
 
-        if ((clone $query)->whereRaw('LOWER(TRIM(name)) = ?', [strtolower(trim($name))])->exists()) {
+        if ((clone $query)->whereRaw('LOWER(TRIM(name)) = ?', [NameHelper::normalize($name)])->exists()) {
             return true;
         }
 
         foreach ($alternativeNames ?? [] as $checkName) {
-            $check = strtolower(trim($checkName));
+            $check = NameHelper::normalize($checkName);
             if (! $check) {
                 continue;
             }
 
-            // Agrupa as condições para que o excludeId se aplique a ambas
             $altExists = (clone $query)
-                ->where(function ($q) use ($check, $checkName) {
+                ->where(function ($q) use ($check) {
                     $q->whereRaw('LOWER(TRIM(name)) = ?', [$check])
-                      ->orWhereJsonContains('alternative_names', $checkName);
+                      ->orWhereRaw("JSON_SEARCH(LOWER(alternative_names), 'one', ?) IS NOT NULL", [$check]);
                 })
                 ->exists();
 
