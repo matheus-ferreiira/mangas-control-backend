@@ -19,7 +19,7 @@ class RequestLoggerMiddleware
 
         $response = $next($request);
 
-        if (config('logging.log_requests', false) && !$this->shouldSkip($request)) {
+        if (config('logging.log_requests', false) && ! $this->shouldSkip($request)) {
             $this->logRequest($request, $response, microtime(true) - $start);
         }
 
@@ -29,14 +29,14 @@ class RequestLoggerMiddleware
     private function logRequest(Request $request, Response $response, float $elapsed): void
     {
         Log::channel('access')->info('HTTP '.$request->method(), [
-            'method'      => $request->method(),
-            'path'        => $request->path(),
-            'status'      => $response->getStatusCode(),
+            'method' => $request->method(),
+            'path' => $request->path(),
+            'status' => $response->getStatusCode(),
             'duration_ms' => round($elapsed * 1000, 2),
-            'ip'          => $request->ip(),
-            'user_id'     => optional(auth()->user())->id,
-            'user_agent'  => $request->userAgent(),
-            'input'       => collect($request->all())->except(self::SENSITIVE_FIELDS)->toArray(),
+            'ip' => $request->ip(),
+            'user_id' => optional(auth()->user())->id,
+            'user_agent' => $request->userAgent(),
+            'input' => collect($request->all())->except(self::SENSITIVE_FIELDS)->toArray(),
         ]);
     }
 

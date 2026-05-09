@@ -22,7 +22,7 @@ class UserContentController extends Controller
     {
         $userContents = $this->userContentService->getUserContents(
             auth()->id(),
-            $request->only(['type', 'status'])
+            $request->only(['type', 'status', 'content_id'])
         );
 
         return $this->success(UserContentResource::collection($userContents));
@@ -39,7 +39,7 @@ class UserContentController extends Controller
     {
         $userContent = UserContent::with(['content', 'site', 'userSite'])->find($id);
 
-        if (!$userContent) {
+        if (! $userContent) {
             return $this->error('Item não encontrado', [], 404);
         }
 
@@ -52,7 +52,7 @@ class UserContentController extends Controller
     {
         $userContent = UserContent::find($id);
 
-        if (!$userContent) {
+        if (! $userContent) {
             return $this->error('Item não encontrado', [], 404);
         }
 
@@ -69,8 +69,8 @@ class UserContentController extends Controller
 
         LogHelper::info('Item da biblioteca atualizado', [
             'user_content_id' => $userContent->id,
-            'content_id'      => $userContent->content_id,
-            'fields'          => array_keys($data),
+            'content_id' => $userContent->content_id,
+            'fields' => array_keys($data),
         ]);
 
         return $this->success(new UserContentResource($userContent), 'Item atualizado com sucesso');
@@ -80,7 +80,7 @@ class UserContentController extends Controller
     {
         $userContent = UserContent::find($id);
 
-        if (!$userContent) {
+        if (! $userContent) {
             return $this->error('Item não encontrado', [], 404);
         }
 
@@ -101,9 +101,9 @@ class UserContentController extends Controller
 
         LogHelper::info('Progresso incrementado', [
             'user_content_id' => $userContent->id,
-            'content_id'      => $userContent->content_id,
-            'previous'        => $previous,
-            'current'         => $userContent->current_units,
+            'content_id' => $userContent->content_id,
+            'previous' => $previous,
+            'current' => $userContent->current_units,
         ]);
 
         return $this->success(new UserContentResource($userContent), 'Progresso atualizado');
@@ -113,7 +113,7 @@ class UserContentController extends Controller
     {
         $userContent = UserContent::find($id);
 
-        if (!$userContent) {
+        if (! $userContent) {
             return $this->error('Item não encontrado', [], 404);
         }
 
@@ -123,7 +123,7 @@ class UserContentController extends Controller
 
         LogHelper::info('Item removido da biblioteca', [
             'user_content_id' => $id,
-            'content_id'      => $userContent->content_id,
+            'content_id' => $userContent->content_id,
         ]);
 
         return $this->success(null, 'Item removido da biblioteca');

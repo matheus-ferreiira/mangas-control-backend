@@ -12,7 +12,7 @@ class LogViewerAuth
     {
         $password = config('logging.viewer_password');
 
-        if (!$password) {
+        if (! $password) {
             abort(503, 'Configure LOG_VIEWER_PASSWORD no .env para acessar o log viewer.');
         }
 

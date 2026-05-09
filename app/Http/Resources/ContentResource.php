@@ -12,50 +12,56 @@ class ContentResource extends JsonResource
     {
         return [
             // Identidade
-            'id'                => $this->id,
-            'external_id'       => $this->external_id,
-            'source'            => $this->source,
+            'id' => $this->id,
+            'external_id' => $this->external_id,
+            'source' => $this->source,
 
             // Nomes
-            'name'              => $this->name,
+            'name' => $this->name,
             'alternative_names' => $this->alternative_names ?? [],
 
             // Mídia
-            'cover'             => $this->resolveUrl($this->cover),
-            'background'        => $this->resolveUrl($this->background),
-            'trailer_url'       => $this->trailer_url,
+            'cover' => $this->resolveUrl($this->cover),
+            'background' => $this->resolveUrl($this->background),
+            'trailer_url' => $this->trailer_url,
             'trailer_embed_url' => $this->buildEmbedUrl($this->trailer_url),
 
             // Classificação
-            'type'              => $this->type,
-            'origin_type'       => $this->origin_type,
-            'status'            => $this->status,
-            'is_adult'          => $this->is_adult,
-            'is_in_library'     => (bool) ($this->is_in_library ?? false),
+            'type' => $this->type,
+            'origin_type' => $this->origin_type,
+            'status' => $this->status,
+            'is_adult' => $this->is_adult,
+            'age_rating' => $this->age_rating,
+            'is_in_library' => (bool) ($this->is_in_library ?? false),
 
             // Conteúdo
-            'total_units'       => $this->total_units,
-            'total_seasons'     => $this->total_seasons,
-            'duration'          => $this->duration,
+            'total_units' => $this->total_units,
+            'total_seasons' => $this->total_seasons,
+            'duration' => $this->duration,
             'duration_formatted' => $this->formatDuration($this->duration),
-            'last_unit_update'  => $this->last_unit_update,
-            'synopsis'          => $this->synopsis,
-            'genres'            => $this->genres ?? [],
+            'last_unit_update' => $this->last_unit_update,
+            'synopsis' => $this->synopsis,
+            'tagline' => $this->tagline,
+            'genres' => $this->genres ?? [],
+            'studios' => $this->studios ?? [],
+            'demographics' => $this->demographics ?? [],
+            'themes' => $this->themes ?? [],
+            'networks' => $this->networks ?? [],
 
             // Origem
-            'release_year'      => $this->release_year,
+            'release_year' => $this->release_year,
             'original_language' => $this->original_language,
-            'country'           => $this->country,
+            'country' => $this->country,
 
             // Métricas
-            'rating'            => $this->rating,
-            'votes_count'       => $this->votes_count,
-            'popularity'        => $this->popularity,
-            'score'             => $this->score,
+            'rating' => $this->rating,
+            'votes_count' => $this->votes_count,
+            'popularity' => $this->popularity,
+            'score' => $this->score,
 
             // Timestamps
-            'created_at'        => $this->created_at,
-            'updated_at'        => $this->updated_at,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
         ];
     }
 
@@ -77,7 +83,7 @@ class ContentResource extends JsonResource
         }
 
         if (preg_match('/[?&]v=([^&]+)/', $trailerUrl, $matches)) {
-            return 'https://www.youtube.com/embed/' . $matches[1];
+            return 'https://www.youtube.com/embed/'.$matches[1];
         }
 
         return null;

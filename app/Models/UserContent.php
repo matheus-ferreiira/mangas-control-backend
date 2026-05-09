@@ -19,8 +19,8 @@ class UserContent extends Model
     ];
 
     protected $casts = [
-        'current_units'    => 'integer',
-        'rating'           => 'float',
+        'current_units' => 'integer',
+        'rating' => 'float',
         'last_unit_update' => 'datetime',
     ];
 

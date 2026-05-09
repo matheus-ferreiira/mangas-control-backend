@@ -30,8 +30,8 @@ class SiteController extends Controller
 
         LogHelper::info('Site criado', [
             'site_id' => $site->id,
-            'name'    => $site->name,
-            'url'     => $site->url,
+            'name' => $site->name,
+            'url' => $site->url,
         ]);
 
         return $this->success(new SiteResource($site), 'Site criado com sucesso', 201);
@@ -48,7 +48,7 @@ class SiteController extends Controller
 
         LogHelper::info('Site atualizado', [
             'site_id' => $site->id,
-            'fields'  => array_keys($request->validated()),
+            'fields' => array_keys($request->validated()),
         ]);
 
         return $this->success(new SiteResource($site), 'Site atualizado com sucesso');
@@ -56,14 +56,14 @@ class SiteController extends Controller
 
     public function destroy(Site $site): JsonResponse
     {
-        $id   = $site->id;
+        $id = $site->id;
         $name = $site->name;
 
         $site->delete();
 
         LogHelper::info('Site removido', [
             'site_id' => $id,
-            'name'    => $name,
+            'name' => $name,
         ]);
 
         return $this->success(null, 'Site removido com sucesso');

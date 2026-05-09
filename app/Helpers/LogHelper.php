@@ -19,11 +19,11 @@ class LogHelper
 
         if ($exception !== null) {
             $ctx['exception'] = [
-                'class'   => get_class($exception),
+                'class' => get_class($exception),
                 'message' => $exception->getMessage(),
-                'file'    => $exception->getFile(),
-                'line'    => $exception->getLine(),
-                'trace'   => $exception->getTraceAsString(),
+                'file' => $exception->getFile(),
+                'line' => $exception->getLine(),
+                'trace' => $exception->getTraceAsString(),
             ];
         }
 
@@ -32,7 +32,7 @@ class LogHelper
 
     public static function debug(string $message, array $context = []): void
     {
-        if (!config('app.debug')) {
+        if (! config('app.debug')) {
             return;
         }
 
@@ -47,7 +47,7 @@ class LogHelper
     private static function enrich(array $context): array
     {
         $base = [
-            'env'       => config('app.env'),
+            'env' => config('app.env'),
             'timestamp' => now()->toIso8601String(),
         ];
 

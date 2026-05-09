@@ -21,7 +21,8 @@ class ContentController extends Controller
 
     // Chave de versão: incrementada em CUD para invalidar todas as caches de listagem
     private const CACHE_VERSION_KEY = 'contents.cache_version';
-    private const CACHE_TTL         = 60; // segundos
+
+    private const CACHE_TTL = 60; // segundos
 
     public function __construct(private ContentService $contentService) {}
 
@@ -34,9 +35,9 @@ class ContentController extends Controller
             'language', 'country', 'is_adult',
         ]);
 
-        $userId   = auth()->id();
-        $version  = Cache::get(self::CACHE_VERSION_KEY, 0);
-        $cacheKey = "api.contents.v{$version}.u{$userId}." . md5(json_encode($filters) . '_p' . $request->get('page', 1));
+        $userId = auth()->id();
+        $version = Cache::get(self::CACHE_VERSION_KEY, 0);
+        $cacheKey = "api.contents.v{$version}.u{$userId}.".md5(json_encode($filters).'_p'.$request->get('page', 1));
 
         $data = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($filters, $request, $userId) {
             $result = $this->contentService->getContents($filters, $userId);
@@ -46,13 +47,13 @@ class ContentController extends Controller
                     ->map(fn ($c) => (new ContentResource($c))->toArray($request))
                     ->values()
                     ->all(),
-                'meta'  => [
+                'meta' => [
                     'current_page' => $result->currentPage(),
-                    'last_page'    => $result->lastPage(),
-                    'per_page'     => $result->perPage(),
-                    'total'        => $result->total(),
-                    'from'         => $result->firstItem(),
-                    'to'           => $result->lastItem(),
+                    'last_page' => $result->lastPage(),
+                    'per_page' => $result->perPage(),
+                    'total' => $result->total(),
+                    'from' => $result->firstItem(),
+                    'to' => $result->lastItem(),
                 ],
             ];
         });
@@ -82,9 +83,9 @@ class ContentController extends Controller
 
         LogHelper::info('Conteúdo criado', [
             'content_id' => $content->id,
-            'name'       => $content->name,
-            'type'       => $content->type,
-            'has_cover'  => (bool) $content->cover,
+            'name' => $content->name,
+            'type' => $content->type,
+            'has_cover' => (bool) $content->cover,
         ]);
 
         return $this->success(new ContentResource($content), 'Conteúdo criado com sucesso', 201);
@@ -92,7 +93,7 @@ class ContentController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $userId  = auth()->id();
+        $userId = auth()->id();
         $content = Content::selectRaw(
             'contents.*, EXISTS(SELECT 1 FROM user_contents WHERE content_id = contents.id AND user_id = ?) as is_in_library',
             [(int) $userId]
@@ -139,7 +140,7 @@ class ContentController extends Controller
 
         LogHelper::info('Conteúdo atualizado', [
             'content_id' => $content->id,
-            'fields'     => array_keys($data),
+            'fields' => array_keys($data),
         ]);
 
         return $this->success(new ContentResource($content), 'Conteúdo atualizado com sucesso');
@@ -163,7 +164,7 @@ class ContentController extends Controller
 
         LogHelper::info('Conteúdo removido', [
             'content_id' => $id,
-            'name'       => $content->name,
+            'name' => $content->name,
         ]);
 
         return $this->success(null, 'Conteúdo removido com sucesso');

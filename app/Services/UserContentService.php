@@ -18,12 +18,16 @@ class UserContentService
         $query = UserContent::with(['content', 'site', 'userSite'])
             ->where('user_id', $userId);
 
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
-        if (!empty($filters['type'])) {
+        if (! empty($filters['type'])) {
             $query->whereHas('content', fn ($q) => $q->where('type', $filters['type']));
+        }
+
+        if (! empty($filters['content_id'])) {
+            $query->where('content_id', (int) $filters['content_id']);
         }
 
         return $query->orderByDesc('updated_at')->paginate(9999);
@@ -36,9 +40,9 @@ class UserContentService
         $userContent->load(['content', 'site', 'userSite']);
 
         LogHelper::info('Item adicionado à biblioteca', [
-            'user_id'         => $userId,
+            'user_id' => $userId,
             'user_content_id' => $userContent->id,
-            'content_id'      => $userContent->content_id,
+            'content_id' => $userContent->content_id,
         ]);
 
         return $userContent;

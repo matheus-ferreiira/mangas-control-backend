@@ -20,7 +20,7 @@ class NameHelper
      */
     public static function normalizeList(array $names, int $max = 50): array
     {
-        $seen   = [];
+        $seen = [];
         $result = [];
 
         foreach ($names as $name) {
@@ -39,7 +39,7 @@ class NameHelper
             }
 
             $seen[$key] = true;
-            $result[]   = $name;
+            $result[] = $name;
         }
 
         return array_values($result);

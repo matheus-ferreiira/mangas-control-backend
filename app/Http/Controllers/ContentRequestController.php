@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Helpers\LogHelper;
 use App\Http\Requests\RejectContentRequestRequest;
 use App\Http\Requests\StoreContentRequestRequest;
 use App\Http\Resources\ContentRequestResource;
@@ -44,7 +43,7 @@ class ContentRequestController extends Controller
     {
         $requests = $this->contentRequestService->list([
             'user_id' => auth()->id(),
-            'status'  => $request->query('status'),
+            'status' => $request->query('status'),
         ]);
 
         return $this->success(ContentRequestResource::collection($requests));

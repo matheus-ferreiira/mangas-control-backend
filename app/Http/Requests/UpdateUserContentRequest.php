@@ -15,8 +15,8 @@ class UpdateUserContentRequest extends BaseFormRequest
     public function rules(): array
     {
         return [
-            'site_id'       => ['nullable', 'integer', 'exists:sites,id'],
-            'user_site_id'  => [
+            'site_id' => ['nullable', 'integer', 'exists:sites,id'],
+            'user_site_id' => [
                 'nullable',
                 'integer',
                 Rule::exists('user_sites', 'id')->where('user_id', auth()->id()),
@@ -31,15 +31,15 @@ class UpdateUserContentRequest extends BaseFormRequest
                     }
 
                     $userContent = UserContent::with('content')->find($this->route('id'));
-                    $total       = $userContent?->content?->total_units;
+                    $total = $userContent?->content?->total_units;
 
                     if ($total !== null && $value > $total) {
                         $fail("Você não pode ultrapassar o total de episódios/capítulos ({$total}).");
                     }
                 },
             ],
-            'rating'        => ['nullable', 'numeric', 'min:0', 'max:10'],
-            'status'        => ['sometimes', 'in:reading,completed,paused,dropped,plan_to_read'],
+            'rating' => ['nullable', 'numeric', 'min:0', 'max:10'],
+            'status' => ['sometimes', 'in:reading,completed,paused,dropped,plan_to_read'],
         ];
     }
 }

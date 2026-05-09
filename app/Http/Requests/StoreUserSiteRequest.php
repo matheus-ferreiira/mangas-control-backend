@@ -14,8 +14,8 @@ class StoreUserSiteRequest extends BaseFormRequest
     public function rules(): array
     {
         return [
-            'name'        => ['required', 'string', 'max:255'],
-            'url'         => ['required', 'url', 'max:500'],
+            'name' => ['required', 'string', 'max:255'],
+            'url' => ['required', 'url', 'max:500'],
             'is_favorite' => ['boolean'],
         ];
     }

@@ -25,14 +25,14 @@ class ImportContentsCommand extends Command
 
     public function handle(ExternalContentService $service): int
     {
-        $type        = $this->option('type');
-        $origin      = $this->option('origin') ?: null;
-        $priority    = $this->option('priority') ?: null;
-        $pageStart   = (int) $this->option('pageStart');
-        $pageEnd     = (int) $this->option('pageEnd');
-        $perPage     = min((int) $this->option('perPage'), 25);
-        $auto        = (bool) $this->option('auto');
-        $force       = (bool) $this->option('force');
+        $type = $this->option('type');
+        $origin = $this->option('origin') ?: null;
+        $priority = $this->option('priority') ?: null;
+        $pageStart = (int) $this->option('pageStart');
+        $pageEnd = (int) $this->option('pageEnd');
+        $perPage = min((int) $this->option('perPage'), 25);
+        $auto = (bool) $this->option('auto');
+        $force = (bool) $this->option('force');
         $withDetails = (bool) $this->option('details');
 
         $validOrigins = ['manga', 'manhwa', 'manhua'];
@@ -81,7 +81,7 @@ class ImportContentsCommand extends Command
             $this->info("[INFO] Prioridade ativa: {$priority}");
         }
 
-        $log   = fn (string $message) => $this->line($message);
+        $log = fn (string $message) => $this->line($message);
         $types = $type ? [$type] : ['anime', 'manga', 'movie', 'tv'];
         $total = 0;
 
@@ -95,11 +95,11 @@ class ImportContentsCommand extends Command
                 'anime' => $service->importAnime($log, $start, $end, $perPage, $force, $withDetails),
                 'manga' => $service->importManga($log, $start, $end, $perPage, $force, $withDetails, $origin, $priority),
                 'movie' => $service->importMovies($log, $start, $end, $force, $withDetails),
-                'tv'    => $service->importTV($log, $start, $end, $force, $withDetails),
+                'tv' => $service->importTV($log, $start, $end, $force, $withDetails),
             };
 
             if ($auto) {
-                Cache::forever(self::CACHE_KEY . $t, $end);
+                Cache::forever(self::CACHE_KEY.$t, $end);
                 $this->line("[AUTO] Progresso de {$t} salvo até a página {$end}.");
             }
 
@@ -119,10 +119,10 @@ class ImportContentsCommand extends Command
             return [$pageStart, $pageEnd];
         }
 
-        $lastPage   = (int) Cache::get(self::CACHE_KEY . $type, 0);
+        $lastPage = (int) Cache::get(self::CACHE_KEY.$type, 0);
         $windowSize = $pageEnd - $pageStart + 1;
-        $start      = $lastPage + 1;
-        $end        = $lastPage + $windowSize;
+        $start = $lastPage + 1;
+        $end = $lastPage + $windowSize;
 
         $this->line("[AUTO] {$type}: última importada = pág {$lastPage} → próximo bloco = {$start}-{$end}");
 
@@ -135,7 +135,7 @@ class ImportContentsCommand extends Command
             'anime' => 'Animes (Jikan)',
             'manga' => 'Mangas (Jikan)',
             'movie' => 'Filmes (TMDb /discover)',
-            'tv'    => 'Séries (TMDb /discover)',
+            'tv' => 'Séries (TMDb /discover)',
         ];
 
         $extra = in_array($type, ['anime', 'manga']) ? ", {$perPage}/pág" : ', 20/pág fixo';

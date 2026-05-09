@@ -22,7 +22,7 @@ trait ApiResponse
             'message' => $message,
         ];
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             $payload['errors'] = $errors;
         }
 

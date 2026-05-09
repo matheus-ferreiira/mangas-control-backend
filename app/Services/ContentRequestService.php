@@ -13,11 +13,11 @@ class ContentRequestService
     {
         $query = ContentRequest::with(['user', 'admin']);
 
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
-        if (!empty($filters['user_id'])) {
+        if (! empty($filters['user_id'])) {
             $query->where('user_id', $filters['user_id']);
         }
 
@@ -28,15 +28,15 @@ class ContentRequestService
     {
         $contentRequest = ContentRequest::create(array_merge($data, [
             'user_id' => $userId,
-            'status'  => 'pending',
+            'status' => 'pending',
         ]));
 
         $contentRequest->load(['user']);
 
         LogHelper::info('Solicitação de conteúdo criada', [
             'content_request_id' => $contentRequest->id,
-            'user_id'            => $userId,
-            'name'               => $contentRequest->name,
+            'user_id' => $userId,
+            'name' => $contentRequest->name,
         ]);
 
         return $contentRequest;
@@ -51,15 +51,15 @@ class ContentRequestService
         }
 
         $content = Content::create([
-            'name'              => $contentRequest->name,
+            'name' => $contentRequest->name,
             'alternative_names' => $contentRequest->alternative_names,
-            'type'              => $contentRequest->type,
-            'cover'             => $contentRequest->cover,
-            'status'            => 'ongoing',
+            'type' => $contentRequest->type,
+            'cover' => $contentRequest->cover,
+            'status' => 'ongoing',
         ]);
 
         $contentRequest->update([
-            'status'   => 'approved',
+            'status' => 'approved',
             'admin_id' => $adminId,
         ]);
 
@@ -67,8 +67,8 @@ class ContentRequestService
 
         LogHelper::info('Solicitação aprovada', [
             'content_request_id' => $contentRequest->id,
-            'content_id'         => $content->id,
-            'admin_id'           => $adminId,
+            'content_id' => $content->id,
+            'admin_id' => $adminId,
         ]);
 
         return $contentRequest;
@@ -83,8 +83,8 @@ class ContentRequestService
         }
 
         $contentRequest->update([
-            'status'           => 'rejected',
-            'admin_id'         => $adminId,
+            'status' => 'rejected',
+            'admin_id' => $adminId,
             'rejection_reason' => $reason,
         ]);
 
@@ -92,8 +92,8 @@ class ContentRequestService
 
         LogHelper::info('Solicitação rejeitada', [
             'content_request_id' => $contentRequest->id,
-            'admin_id'           => $adminId,
-            'reason'             => $reason,
+            'admin_id' => $adminId,
+            'reason' => $reason,
         ]);
 
         return $contentRequest;

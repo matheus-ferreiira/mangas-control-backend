@@ -28,8 +28,8 @@ return new class extends Migration
                 "ALTER TABLE contents MODIFY COLUMN type ENUM('{$list}') NOT NULL"
             ),
             'sqlite' => $this->recreateSqlite($list),
-            'pgsql'  => $this->alterPostgres($list),
-            default  => null,
+            'pgsql' => $this->alterPostgres($list),
+            default => null,
         };
     }
 

@@ -10,12 +10,12 @@ class UserSiteResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'          => $this->id,
-            'name'        => $this->name,
-            'url'         => $this->url,
+            'id' => $this->id,
+            'name' => $this->name,
+            'url' => $this->url,
             'is_favorite' => $this->is_favorite,
-            'created_at'  => $this->created_at,
-            'updated_at'  => $this->updated_at,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
         ];
     }
 }

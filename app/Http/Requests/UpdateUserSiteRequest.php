@@ -14,8 +14,8 @@ class UpdateUserSiteRequest extends BaseFormRequest
     public function rules(): array
     {
         return [
-            'name'        => ['sometimes', 'string', 'max:255'],
-            'url'         => ['sometimes', 'url', 'max:500'],
+            'name' => ['sometimes', 'string', 'max:255'],
+            'url' => ['sometimes', 'url', 'max:500'],
             'is_favorite' => ['boolean'],
         ];
     }

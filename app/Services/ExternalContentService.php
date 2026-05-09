@@ -12,10 +12,13 @@ use Illuminate\Support\Facades\Log;
 
 class ExternalContentService
 {
-    private const JIKAN_BASE      = 'https://api.jikan.moe/v4';
-    private const TMDB_BASE       = 'https://api.themoviedb.org/3';
+    private const JIKAN_BASE = 'https://api.jikan.moe/v4';
+
+    private const TMDB_BASE = 'https://api.themoviedb.org/3';
+
     private const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
-    private const TMDB_BACK_BASE  = 'https://image.tmdb.org/t/p/original';
+
+    private const TMDB_BACK_BASE = 'https://image.tmdb.org/t/p/original';
 
     // Campos que --force nunca sobrescreve (identidade do registro)
     private const FORCE_SKIP = ['name', 'alternative_names', 'type', 'source', 'external_id'];
@@ -28,10 +31,10 @@ class ExternalContentService
 
     public function importAnime(
         callable $log,
-        int $pageStart    = 1,
-        int $pageEnd      = 5,
-        int $perPage      = 25,
-        bool $force       = false,
+        int $pageStart = 1,
+        int $pageEnd = 5,
+        int $perPage = 25,
+        bool $force = false,
         bool $withDetails = false
     ): int {
         $imported = 0;
@@ -50,42 +53,48 @@ class ExternalContentService
                 }
 
                 try {
-                    $rating     = isset($item['score']) ? (float) $item['score'] : null;
+                    $rating = isset($item['score']) ? (float) $item['score'] : null;
                     $votesCount = $item['scored_by'] ?? null;
 
                     $data = [
-                        'external_id'       => (string) ($item['mal_id'] ?? ''),
-                        'source'            => 'jikan',
-                        'name'              => $name,
+                        'external_id' => (string) ($item['mal_id'] ?? ''),
+                        'source' => 'jikan',
+                        'name' => $name,
                         'alternative_names' => $this->extractAltNames($item, $name),
-                        'cover'             => $item['images']['jpg']['large_image_url'] ?? null,
-                        'background'        => null,
-                        'type'              => 'anime',
-                        'status'            => $this->mapJikanStatus($item['status'] ?? ''),
-                        'is_adult'          => ($item['rating'] ?? '') === 'Rx - Hentai',
-                        'total_units'       => $item['episodes'] ?? null,
-                        'total_seasons'     => null,
-                        'duration'          => $this->parseJikanDuration($item['duration'] ?? null),
-                        'last_unit_update'  => $this->parseDate($item['aired']['from'] ?? null),
-                        'trailer_url'       => $item['trailer']['url'] ?? null,
-                        'rating'            => $rating,
-                        'popularity'        => $item['popularity'] ?? null,
-                        'votes_count'       => $votesCount,
-                        'score'             => $this->calculateScore($rating, $votesCount),
-                        'synopsis'          => $item['synopsis'] ?? null,
-                        'genres'            => $this->extractJikanGenres($item),
-                        'release_year'      => $this->cleanYear($item['year'] ?? null),
+                        'cover' => $item['images']['jpg']['large_image_url'] ?? null,
+                        'background' => null,
+                        'type' => 'anime',
+                        'status' => $this->mapJikanStatus($item['status'] ?? ''),
+                        'is_adult' => ($item['rating'] ?? '') === 'Rx - Hentai',
+                        'age_rating' => $this->extractJikanAgeRating($item['rating'] ?? null),
+                        'total_units' => $item['episodes'] ?? null,
+                        'total_seasons' => null,
+                        'duration' => $this->parseJikanDuration($item['duration'] ?? null),
+                        'last_unit_update' => $this->parseDate($item['aired']['from'] ?? null),
+                        'trailer_url' => $item['trailer']['url'] ?? null,
+                        'rating' => $rating,
+                        'popularity' => $item['popularity'] ?? null,
+                        'votes_count' => $votesCount,
+                        'score' => $this->calculateScore($rating, $votesCount),
+                        'synopsis' => $item['synopsis'] ?? null,
+                        'genres' => $this->extractJikanGenres($item),
+                        'studios' => $this->extractJikanStudios($item),
+                        'demographics' => $this->extractJikanNames($item['demographics'] ?? []),
+                        'themes' => $this->extractJikanNames($item['themes'] ?? []),
+                        'networks' => null,
+                        'tagline' => null,
+                        'release_year' => $this->cleanYear($item['year'] ?? null),
                         'original_language' => 'ja',
-                        'country'           => 'JP',
+                        'country' => 'JP',
                     ];
 
                     $imported += $this->upsert($data, $data['alternative_names'], $force, $log, 'anime');
                 } catch (\Exception $e) {
-                    $log("[ERRO ITEM][anime][pág {$page}] {$name}: " . $e->getMessage());
+                    $log("[ERRO ITEM][anime][pág {$page}] {$name}: ".$e->getMessage());
                     Log::warning('ImportContents item error', [
-                        'type'  => 'anime',
-                        'page'  => $page,
-                        'name'  => $name,
+                        'type' => 'anime',
+                        'page' => $page,
+                        'name' => $name,
                         'error' => $e->getMessage(),
                     ]);
                 }
@@ -105,12 +114,12 @@ class ExternalContentService
 
     public function importManga(
         callable $log,
-        int $pageStart    = 1,
-        int $pageEnd      = 5,
-        int $perPage      = 25,
-        bool $force       = false,
+        int $pageStart = 1,
+        int $pageEnd = 5,
+        int $perPage = 25,
+        bool $force = false,
         bool $withDetails = false,
-        ?string $origin   = null,
+        ?string $origin = null,
         ?string $priority = null,
     ): int {
         $imported = 0;
@@ -126,8 +135,8 @@ class ExternalContentService
             $items = $result['data'];
             if ($priority) {
                 $priorityItems = array_values(array_filter($items, fn ($i) => $this->detectOriginType($i) === $priority));
-                $normalItems   = array_values(array_filter($items, fn ($i) => $this->detectOriginType($i) !== $priority));
-                $items         = array_merge($priorityItems, $normalItems);
+                $normalItems = array_values(array_filter($items, fn ($i) => $this->detectOriginType($i) !== $priority));
+                $items = array_merge($priorityItems, $normalItems);
             }
 
             foreach ($items as $item) {
@@ -142,48 +151,55 @@ class ExternalContentService
                     // Filtro: pula itens que não pertencem à origem solicitada
                     if ($origin && $originType !== $origin) {
                         $log("[SKIP][origin] {$name} (detectado: {$originType}, esperado: {$origin})");
+
                         continue;
                     }
 
-                    $rating     = isset($item['score']) ? (float) $item['score'] : null;
+                    $rating = isset($item['score']) ? (float) $item['score'] : null;
                     $votesCount = $item['scored_by'] ?? null;
 
                     $data = [
-                        'external_id'       => (string) ($item['mal_id'] ?? ''),
-                        'source'            => 'jikan',
-                        'name'              => $name,
+                        'external_id' => (string) ($item['mal_id'] ?? ''),
+                        'source' => 'jikan',
+                        'name' => $name,
                         'alternative_names' => $this->extractAltNames($item, $name),
-                        'origin_type'       => $originType,
-                        'cover'             => $item['images']['jpg']['large_image_url'] ?? null,
-                        'background'        => null,
-                        'type'              => 'manga',
-                        'status'            => $this->mapJikanStatus($item['status'] ?? ''),
-                        'is_adult'          => false,
-                        'total_units'       => $item['chapters'] ?? null,
-                        'total_seasons'     => null,
-                        'duration'          => null,
-                        'last_unit_update'  => $this->parseDate($item['published']['from'] ?? null),
-                        'trailer_url'       => null,
-                        'rating'            => $rating,
-                        'popularity'        => $item['popularity'] ?? null,
-                        'votes_count'       => $votesCount,
-                        'score'             => $this->calculateScore($rating, $votesCount),
-                        'synopsis'          => $item['synopsis'] ?? null,
-                        'genres'            => $this->extractJikanGenres($item),
-                        'release_year'      => $this->cleanYear(
+                        'origin_type' => $originType,
+                        'cover' => $item['images']['jpg']['large_image_url'] ?? null,
+                        'background' => null,
+                        'type' => 'manga',
+                        'status' => $this->mapJikanStatus($item['status'] ?? ''),
+                        'is_adult' => false,
+                        'age_rating' => null,
+                        'total_units' => $item['chapters'] ?? null,
+                        'total_seasons' => null,
+                        'duration' => null,
+                        'last_unit_update' => $this->parseDate($item['published']['from'] ?? null),
+                        'trailer_url' => null,
+                        'rating' => $rating,
+                        'popularity' => $item['popularity'] ?? null,
+                        'votes_count' => $votesCount,
+                        'score' => $this->calculateScore($rating, $votesCount),
+                        'synopsis' => $item['synopsis'] ?? null,
+                        'genres' => $this->extractJikanGenres($item),
+                        'studios' => $this->extractMangaAuthors($item),
+                        'demographics' => $this->extractJikanNames($item['demographics'] ?? []),
+                        'themes' => $this->extractJikanNames($item['themes'] ?? []),
+                        'networks' => null,
+                        'tagline' => null,
+                        'release_year' => $this->cleanYear(
                             $item['year'] ?? $this->extractYearFromDate($item['published']['from'] ?? null)
                         ),
                         'original_language' => 'ja',
-                        'country'           => 'JP',
+                        'country' => 'JP',
                     ];
 
                     $imported += $this->upsert($data, $data['alternative_names'], $force, $log, 'manga');
                 } catch (\Exception $e) {
-                    $log("[ERRO ITEM][manga][pág {$page}] {$name}: " . $e->getMessage());
+                    $log("[ERRO ITEM][manga][pág {$page}] {$name}: ".$e->getMessage());
                     Log::warning('ImportContents item error', [
-                        'type'  => 'manga',
-                        'page'  => $page,
-                        'name'  => $name,
+                        'type' => 'manga',
+                        'page' => $page,
+                        'name' => $name,
                         'error' => $e->getMessage(),
                     ]);
                 }
@@ -203,9 +219,9 @@ class ExternalContentService
 
     public function importMovies(
         callable $log,
-        int $pageStart    = 1,
-        int $pageEnd      = 5,
-        bool $force       = false,
+        int $pageStart = 1,
+        int $pageEnd = 5,
+        bool $force = false,
         bool $withDetails = false
     ): int {
         $apiKey = config('services.tmdb.key');
@@ -239,44 +255,50 @@ class ExternalContentService
                         usleep(150_000);
                     }
 
-                    $rating     = isset($item['vote_average']) ? (float) $item['vote_average'] : null;
+                    $rating = isset($item['vote_average']) ? (float) $item['vote_average'] : null;
                     $votesCount = $item['vote_count'] ?? null;
 
                     $data = [
-                        'external_id'       => (string) $item['id'],
-                        'source'            => 'tmdb',
-                        'name'              => $name,
+                        'external_id' => (string) $item['id'],
+                        'source' => 'tmdb',
+                        'name' => $name,
                         'alternative_names' => $this->extractTmdbAltNames($item, $name),
-                        'cover'             => $this->tmdbImage($item['poster_path'] ?? null),
-                        'background'        => $this->tmdbBackdrop($item['backdrop_path'] ?? null),
-                        'type'              => 'movie',
-                        'status'            => 'completed',
-                        'is_adult'          => (bool) ($item['adult'] ?? false),
-                        'total_units'       => null,
-                        'total_seasons'     => null,
-                        'duration'          => $detail ? ($detail['runtime'] ?? null) : null,
-                        'last_unit_update'  => $this->parseDate($item['release_date'] ?? null),
-                        'trailer_url'       => $detail ? $this->extractTmdbTrailer($detail) : null,
-                        'rating'            => $rating,
-                        'popularity'        => isset($item['popularity']) ? (int) $item['popularity'] : null,
-                        'votes_count'       => $votesCount,
-                        'score'             => $this->calculateScore($rating, $votesCount),
-                        'synopsis'          => $item['overview'] ?? null,
-                        'genres'            => $this->mapTmdbGenres($item['genre_ids'] ?? [], $genreMap),
-                        'release_year'      => $this->extractYearFromDate($item['release_date'] ?? null),
+                        'cover' => $this->tmdbImage($item['poster_path'] ?? null),
+                        'background' => $this->tmdbBackdrop($item['backdrop_path'] ?? null),
+                        'type' => 'movie',
+                        'status' => 'completed',
+                        'is_adult' => (bool) ($item['adult'] ?? false),
+                        'age_rating' => $detail ? $this->extractTmdbAgeRating($detail) : null,
+                        'total_units' => null,
+                        'total_seasons' => null,
+                        'duration' => $detail ? ($detail['runtime'] ?? null) : null,
+                        'last_unit_update' => $this->parseDate($item['release_date'] ?? null),
+                        'trailer_url' => $detail ? $this->extractTmdbTrailer($detail) : null,
+                        'rating' => $rating,
+                        'popularity' => isset($item['popularity']) ? (int) $item['popularity'] : null,
+                        'votes_count' => $votesCount,
+                        'score' => $this->calculateScore($rating, $votesCount),
+                        'synopsis' => $item['overview'] ?? null,
+                        'genres' => $this->mapTmdbGenres($item['genre_ids'] ?? [], $genreMap),
+                        'studios' => $detail ? $this->extractTmdbStudios($detail) : null,
+                        'tagline' => $detail ? ($detail['tagline'] ?: null) : null,
+                        'demographics' => null,
+                        'themes' => null,
+                        'networks' => null,
+                        'release_year' => $this->extractYearFromDate($item['release_date'] ?? null),
                         'original_language' => $item['original_language'] ?? null,
-                        'country'           => $detail
+                        'country' => $detail
                             ? ($detail['production_countries'][0]['iso_3166_1'] ?? null)
                             : null,
                     ];
 
                     $imported += $this->upsert($data, [], $force, $log, 'movie');
                 } catch (\Exception $e) {
-                    $log("[ERRO ITEM][movie][pág {$page}] {$name}: " . $e->getMessage());
+                    $log("[ERRO ITEM][movie][pág {$page}] {$name}: ".$e->getMessage());
                     Log::warning('ImportContents item error', [
-                        'type'  => 'movie',
-                        'page'  => $page,
-                        'name'  => $name,
+                        'type' => 'movie',
+                        'page' => $page,
+                        'name' => $name,
                         'error' => $e->getMessage(),
                     ]);
                 }
@@ -296,9 +318,9 @@ class ExternalContentService
 
     public function importTV(
         callable $log,
-        int $pageStart    = 1,
-        int $pageEnd      = 5,
-        bool $force       = false,
+        int $pageStart = 1,
+        int $pageEnd = 5,
+        bool $force = false,
         bool $withDetails = false
     ): int {
         $apiKey = config('services.tmdb.key');
@@ -332,7 +354,7 @@ class ExternalContentService
                         usleep(150_000);
                     }
 
-                    $rating     = isset($item['vote_average']) ? (float) $item['vote_average'] : null;
+                    $rating = isset($item['vote_average']) ? (float) $item['vote_average'] : null;
                     $votesCount = $item['vote_count'] ?? null;
 
                     $status = $detail
@@ -340,39 +362,45 @@ class ExternalContentService
                         : $this->inferTvStatus($item['first_air_date'] ?? null);
 
                     $data = [
-                        'external_id'       => (string) $item['id'],
-                        'source'            => 'tmdb',
-                        'name'              => $name,
+                        'external_id' => (string) $item['id'],
+                        'source' => 'tmdb',
+                        'name' => $name,
                         'alternative_names' => $this->extractTmdbAltNames($item, $name),
-                        'cover'             => $this->tmdbImage($item['poster_path'] ?? null),
-                        'background'        => $this->tmdbBackdrop($item['backdrop_path'] ?? null),
-                        'type'              => 'tv',
-                        'status'            => $status,
-                        'is_adult'          => (bool) ($item['adult'] ?? false),
-                        'total_units'       => $detail ? ($detail['number_of_episodes'] ?? null) : null,
-                        'total_seasons'     => $detail ? ($detail['number_of_seasons'] ?? null) : null,
-                        'duration'          => $detail ? ($detail['episode_run_time'][0] ?? null) : null,
-                        'last_unit_update'  => $this->parseDate($item['first_air_date'] ?? null),
-                        'trailer_url'       => $detail ? $this->extractTmdbTrailer($detail) : null,
-                        'rating'            => $rating,
-                        'popularity'        => isset($item['popularity']) ? (int) $item['popularity'] : null,
-                        'votes_count'       => $votesCount,
-                        'score'             => $this->calculateScore($rating, $votesCount),
-                        'synopsis'          => $item['overview'] ?? null,
-                        'genres'            => $this->mapTmdbGenres($item['genre_ids'] ?? [], $genreMap),
-                        'release_year'      => $this->extractYearFromDate($item['first_air_date'] ?? null),
+                        'cover' => $this->tmdbImage($item['poster_path'] ?? null),
+                        'background' => $this->tmdbBackdrop($item['backdrop_path'] ?? null),
+                        'type' => 'tv',
+                        'status' => $status,
+                        'is_adult' => (bool) ($item['adult'] ?? false),
+                        'age_rating' => $detail ? $this->extractTmdbAgeRating($detail) : null,
+                        'total_units' => $detail ? ($detail['number_of_episodes'] ?? null) : null,
+                        'total_seasons' => $detail ? ($detail['number_of_seasons'] ?? null) : null,
+                        'duration' => $detail ? ($detail['episode_run_time'][0] ?? null) : null,
+                        'last_unit_update' => $this->parseDate($item['first_air_date'] ?? null),
+                        'trailer_url' => $detail ? $this->extractTmdbTrailer($detail) : null,
+                        'rating' => $rating,
+                        'popularity' => isset($item['popularity']) ? (int) $item['popularity'] : null,
+                        'votes_count' => $votesCount,
+                        'score' => $this->calculateScore($rating, $votesCount),
+                        'synopsis' => $item['overview'] ?? null,
+                        'genres' => $this->mapTmdbGenres($item['genre_ids'] ?? [], $genreMap),
+                        'studios' => $detail ? $this->extractTmdbStudios($detail) : null,
+                        'tagline' => $detail ? ($detail['tagline'] ?: null) : null,
+                        'networks' => $detail ? $this->extractTmdbNetworks($detail) : null,
+                        'demographics' => null,
+                        'themes' => null,
+                        'release_year' => $this->extractYearFromDate($item['first_air_date'] ?? null),
                         'original_language' => $item['original_language'] ?? null,
-                        'country'           => $item['origin_country'][0]
+                        'country' => $item['origin_country'][0]
                             ?? ($detail['origin_country'][0] ?? null),
                     ];
 
                     $imported += $this->upsert($data, [], $force, $log, 'tv');
                 } catch (\Exception $e) {
-                    $log("[ERRO ITEM][tv][pág {$page}] {$name}: " . $e->getMessage());
+                    $log("[ERRO ITEM][tv][pág {$page}] {$name}: ".$e->getMessage());
                     Log::warning('ImportContents item error', [
-                        'type'  => 'tv',
-                        'page'  => $page,
-                        'name'  => $name,
+                        'type' => 'tv',
+                        'page' => $page,
+                        'name' => $name,
                         'error' => $e->getMessage(),
                     ]);
                 }
@@ -396,10 +424,10 @@ class ExternalContentService
 
     private function upsert(array $data, array $altNames, bool $force, callable $log, string $type): int
     {
-        $name     = $data['name'];
-        $source   = $data['source'] ?? null;
-        $extId    = $data['external_id'] ?? null;
-        $label    = $data['origin_type'] ?? $type;
+        $name = $data['name'];
+        $source = $data['source'] ?? null;
+        $extId = $data['external_id'] ?? null;
+        $label = $data['origin_type'] ?? $type;
         $existing = $this->findExisting($name, $altNames, $source, $extId);
 
         if ($existing) {
@@ -480,20 +508,20 @@ class ExternalContentService
     {
         try {
             $response = Http::retry(3, 1000)
-                ->get(self::JIKAN_BASE . $endpoint, ['page' => $page, 'limit' => $perPage]);
+                ->get(self::JIKAN_BASE.$endpoint, ['page' => $page, 'limit' => $perPage]);
 
             if (! $response->successful()) {
-                $log("[AVISO] Jikan página {$page}: HTTP " . $response->status());
+                $log("[AVISO] Jikan página {$page}: HTTP ".$response->status());
 
                 return ['data' => [], 'has_next' => false];
             }
 
             return [
-                'data'     => $response->json('data', []),
+                'data' => $response->json('data', []),
                 'has_next' => (bool) $response->json('pagination.has_next_page', false),
             ];
         } catch (\Exception $e) {
-            $log("[AVISO] Jikan página {$page}: " . $e->getMessage());
+            $log("[AVISO] Jikan página {$page}: ".$e->getMessage());
             Log::warning("Jikan {$endpoint} page {$page}", ['error' => $e->getMessage()]);
 
             return ['data' => [], 'has_next' => false];
@@ -508,24 +536,24 @@ class ExternalContentService
     {
         try {
             $response = Http::retry(3, 500)
-                ->get(self::TMDB_BASE . $endpoint, [
+                ->get(self::TMDB_BASE.$endpoint, [
                     'api_key' => $apiKey,
                     'sort_by' => 'popularity.desc',
-                    'page'    => $page,
+                    'page' => $page,
                 ]);
 
             if (! $response->successful()) {
-                $log("[AVISO] TMDb página {$page}: HTTP " . $response->status());
+                $log("[AVISO] TMDb página {$page}: HTTP ".$response->status());
 
                 return ['data' => [], 'total_pages' => 0];
             }
 
             return [
-                'data'        => $response->json('results', []),
+                'data' => $response->json('results', []),
                 'total_pages' => (int) $response->json('total_pages', 1),
             ];
         } catch (\Exception $e) {
-            $log("[AVISO] TMDb página {$page}: " . $e->getMessage());
+            $log("[AVISO] TMDb página {$page}: ".$e->getMessage());
             Log::warning("TMDb {$endpoint} page {$page}", ['error' => $e->getMessage()]);
 
             return ['data' => [], 'total_pages' => 0];
@@ -543,9 +571,9 @@ class ExternalContentService
             now()->addMinutes(30),
             function () use ($mediaType, $id, $apiKey) {
                 $response = Http::retry(3, 500)
-                    ->get(self::TMDB_BASE . "/{$mediaType}/{$id}", [
-                        'api_key'            => $apiKey,
-                        'append_to_response' => 'videos',
+                    ->get(self::TMDB_BASE."/{$mediaType}/{$id}", [
+                        'api_key' => $apiKey,
+                        'append_to_response' => 'videos,content_ratings,release_dates',
                     ]);
 
                 return $response->successful() ? $response->json() : [];
@@ -560,7 +588,7 @@ class ExternalContentService
     {
         return Cache::remember("tmdb.genres.{$mediaType}", now()->addHours(24), function () use ($apiKey, $mediaType) {
             $response = Http::retry(3, 500)
-                ->get(self::TMDB_BASE . "/genre/{$mediaType}/list", ['api_key' => $apiKey]);
+                ->get(self::TMDB_BASE."/genre/{$mediaType}/list", ['api_key' => $apiKey]);
 
             return $response->successful()
                 ? collect($response->json('genres', []))->pluck('name', 'id')->all()
@@ -575,13 +603,13 @@ class ExternalContentService
     private function extractAltNames(array $item, string $mainName = ''): array
     {
         $candidates = array_filter([
-            isset($item['title_english'])  ? trim($item['title_english'])  : null,
+            isset($item['title_english']) ? trim($item['title_english']) : null,
             isset($item['title_japanese']) ? trim($item['title_japanese']) : null,
         ]);
 
         if ($mainName) {
             $normalizedMain = NameHelper::normalize($mainName);
-            $candidates     = array_filter($candidates, fn ($a) => NameHelper::normalize($a) !== $normalizedMain);
+            $candidates = array_filter($candidates, fn ($a) => NameHelper::normalize($a) !== $normalizedMain);
         }
 
         return NameHelper::normalizeList(array_values($candidates));
@@ -594,7 +622,7 @@ class ExternalContentService
 
         $candidates = array_filter([
             isset($item['original_title']) ? trim($item['original_title']) : null,
-            isset($item['original_name'])  ? trim($item['original_name'])  : null,
+            isset($item['original_name']) ? trim($item['original_name']) : null,
         ]);
 
         $candidates = array_filter($candidates, fn ($a) => NameHelper::normalize($a) !== $normalizedMain);
@@ -654,6 +682,115 @@ class ExternalContentService
             ->all();
     }
 
+    /** Extrai nomes de um array Jikan genérico (demographics, themes, etc.) */
+    private function extractJikanNames(array $items): ?array
+    {
+        $names = collect($items)->pluck('name')->filter()->values()->all();
+
+        return ! empty($names) ? $names : null;
+    }
+
+    /** Estúdios de anime: studios + producers agrupados. */
+    private function extractJikanStudios(array $item): ?array
+    {
+        $names = collect(array_merge($item['studios'] ?? [], $item['producers'] ?? []))
+            ->pluck('name')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        return ! empty($names) ? $names : null;
+    }
+
+    /** Autores de manga: authors. */
+    private function extractMangaAuthors(array $item): ?array
+    {
+        $names = collect($item['authors'] ?? [])
+            ->pluck('name')
+            ->filter()
+            ->values()
+            ->all();
+
+        return ! empty($names) ? $names : null;
+    }
+
+    /**
+     * Extrai o código de classificação etária do Jikan.
+     * Ex: "PG-13 - Teens 13 or older" → "PG-13"
+     */
+    private function extractJikanAgeRating(?string $rating): ?string
+    {
+        if (! $rating) {
+            return null;
+        }
+
+        // Formato: "CODE - Description"
+        $parts = explode(' - ', $rating, 2);
+
+        return trim($parts[0]) ?: null;
+    }
+
+    /** Produtoras TMDb: production_companies. */
+    private function extractTmdbStudios(array $detail): ?array
+    {
+        $names = collect($detail['production_companies'] ?? [])
+            ->pluck('name')
+            ->filter()
+            ->values()
+            ->all();
+
+        // Para TV, inclui criadores como primeira entrada
+        $creators = collect($detail['created_by'] ?? [])
+            ->pluck('name')
+            ->filter()
+            ->all();
+
+        $all = array_unique(array_merge($creators, $names));
+
+        return ! empty($all) ? array_values($all) : null;
+    }
+
+    /** Redes/plataformas TMDb (TV): networks. */
+    private function extractTmdbNetworks(array $detail): ?array
+    {
+        $names = collect($detail['networks'] ?? [])
+            ->pluck('name')
+            ->filter()
+            ->values()
+            ->all();
+
+        return ! empty($names) ? $names : null;
+    }
+
+    /**
+     * Extrai classificação etária do TMDb.
+     * Filmes: release_dates.results[country=US].release_dates[].certification
+     * TV: content_ratings.results[country=US].rating
+     */
+    private function extractTmdbAgeRating(array $detail): ?string
+    {
+        // TV — content_ratings
+        foreach ($detail['content_ratings']['results'] ?? [] as $entry) {
+            if (($entry['iso_3166_1'] ?? '') === 'US' && ! empty($entry['rating'])) {
+                return $entry['rating'];
+            }
+        }
+
+        // Movie — release_dates
+        foreach ($detail['release_dates']['results'] ?? [] as $entry) {
+            if (($entry['iso_3166_1'] ?? '') === 'US') {
+                foreach ($entry['release_dates'] ?? [] as $rd) {
+                    if (! empty($rd['certification'])) {
+                        return $rd['certification'];
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
     private function mapTmdbGenres(array $genreIds, array $genreMap): array
     {
         return collect($genreIds)
@@ -667,7 +804,7 @@ class ExternalContentService
     {
         foreach ($detail['videos']['results'] ?? [] as $video) {
             if (($video['site'] ?? '') === 'YouTube' && ($video['type'] ?? '') === 'Trailer') {
-                return 'https://www.youtube.com/watch?v=' . $video['key'];
+                return 'https://www.youtube.com/watch?v='.$video['key'];
             }
         }
 
@@ -676,12 +813,12 @@ class ExternalContentService
 
     private function tmdbImage(?string $path): ?string
     {
-        return $path ? self::TMDB_IMAGE_BASE . $path : null;
+        return $path ? self::TMDB_IMAGE_BASE.$path : null;
     }
 
     private function tmdbBackdrop(?string $path): ?string
     {
-        return $path ? self::TMDB_BACK_BASE . $path : null;
+        return $path ? self::TMDB_BACK_BASE.$path : null;
     }
 
     /**
@@ -701,10 +838,10 @@ class ExternalContentService
     {
         return match ($status) {
             'Currently Airing', 'Publishing', 'Not yet aired' => 'ongoing',
-            'Finished Airing', 'Finished'                      => 'completed',
-            'On Hiatus'                                         => 'hiatus',
-            'Discontinued'                                      => 'cancelled',
-            default                                             => 'ongoing',
+            'Finished Airing', 'Finished' => 'completed',
+            'On Hiatus' => 'hiatus',
+            'Discontinued' => 'cancelled',
+            default => 'ongoing',
         };
     }
 
@@ -712,9 +849,9 @@ class ExternalContentService
     {
         return match ($status) {
             'Returning Series', 'In Production', 'Planned', 'Pilot' => 'ongoing',
-            'Ended'                                                   => 'completed',
-            'Canceled', 'Cancelled'                                   => 'cancelled',
-            default                                                   => 'ongoing',
+            'Ended' => 'completed',
+            'Canceled', 'Cancelled' => 'cancelled',
+            default => 'ongoing',
         };
     }
 

@@ -15,15 +15,15 @@ class AuthService
     public function register(array $data): array
     {
         $user = User::create([
-            'name'     => $data['name'],
+            'name' => $data['name'],
             'username' => $data['username'],
-            'email'    => $data['email'],
+            'email' => $data['email'],
             'password' => $data['password'],
         ]);
 
         LogHelper::info('Novo usuário registrado', [
-            'user_id'  => $user->id,
-            'email'    => $user->email,
+            'user_id' => $user->id,
+            'email' => $user->email,
             'username' => $user->username,
         ]);
 
@@ -36,13 +36,13 @@ class AuthService
     {
         $user = User::where('email', $email)->first();
 
-        if (!$user || !Hash::check($password, $user->password)) {
+        if (! $user || ! Hash::check($password, $user->password)) {
             throw new \Exception('Credenciais inválidas');
         }
 
         LogHelper::info('Login via email', [
             'user_id' => $user->id,
-            'email'   => $user->email,
+            'email' => $user->email,
         ]);
 
         $authToken = $user->createToken('auth_token')->plainTextToken;
@@ -56,7 +56,7 @@ class AuthService
 
         if ($status !== Password::RESET_LINK_SENT) {
             LogHelper::warning('Falha ao enviar e-mail de recuperação de senha', [
-                'email'  => $email,
+                'email' => $email,
                 'status' => $status,
             ]);
             throw new \Exception(__($status));
@@ -69,14 +69,14 @@ class AuthService
     {
         $status = Password::reset(
             [
-                'email'                 => $data['email'],
-                'password'              => $data['password'],
+                'email' => $data['email'],
+                'password' => $data['password'],
                 'password_confirmation' => $data['password_confirmation'],
-                'token'                 => $data['token'],
+                'token' => $data['token'],
             ],
             function (User $user, string $password) {
                 $user->forceFill(['password' => $password])
-                     ->setRememberToken(Str::random(60));
+                    ->setRememberToken(Str::random(60));
                 $user->save();
                 event(new PasswordReset($user));
             }
@@ -95,7 +95,7 @@ class AuthService
             'id_token' => $token,
         ]);
 
-        if (!$response->ok()) {
+        if (! $response->ok()) {
             LogHelper::error('Resposta inválida da API do Google', [
                 'http_status' => $response->status(),
             ]);
@@ -111,22 +111,22 @@ class AuthService
             throw new \Exception('Client ID inválido');
         }
 
-        $isNew = !User::where('email', $googleUser['email'])->exists();
+        $isNew = ! User::where('email', $googleUser['email'])->exists();
 
         $user = User::updateOrCreate(
             ['email' => $googleUser['email']],
             [
-                'name'      => $googleUser['name'],
-                'username'  => $this->generateUsername($googleUser['name'], $googleUser['email']),
+                'name' => $googleUser['name'],
+                'username' => $this->generateUsername($googleUser['name'], $googleUser['email']),
                 'google_id' => $googleUser['sub'],
-                'avatar'    => $googleUser['picture'] ?? null,
+                'avatar' => $googleUser['picture'] ?? null,
             ]
         );
 
         LogHelper::info($isNew ? 'Novo usuário registrado via Google' : 'Login via Google', [
             'user_id' => $user->id,
-            'email'   => $user->email,
-            'is_new'  => $isNew,
+            'email' => $user->email,
+            'is_new' => $isNew,
         ]);
 
         $authToken = $user->createToken('auth_token')->plainTextToken;
@@ -143,7 +143,7 @@ class AuthService
         }
 
         $username = $base;
-        $counter  = 1;
+        $counter = 1;
 
         while (User::where('username', $username)->exists()) {
             $username = $base.'_'.$counter;

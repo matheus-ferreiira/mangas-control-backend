@@ -24,9 +24,9 @@ class AuthController extends Controller
         $result = $this->authService->register($request->validated());
 
         return $this->success([
-            'user'         => new UserResource($result['user']),
+            'user' => new UserResource($result['user']),
             'access_token' => $result['token'],
-            'token_type'   => 'Bearer',
+            'token_type' => 'Bearer',
         ], 'Conta criada com sucesso', 201);
     }
 
@@ -39,13 +39,13 @@ class AuthController extends Controller
             );
 
             return $this->success([
-                'user'         => new UserResource($result['user']),
+                'user' => new UserResource($result['user']),
                 'access_token' => $result['token'],
-                'token_type'   => 'Bearer',
+                'token_type' => 'Bearer',
             ], 'Login realizado com sucesso');
         } catch (\Exception $e) {
             LogHelper::warning('Tentativa de login com credenciais inválidas', [
-                'ip'    => $request->ip(),
+                'ip' => $request->ip(),
                 'email' => $request->email,
             ]);
 
@@ -63,15 +63,15 @@ class AuthController extends Controller
             $result = $this->authService->handleGoogleToken($request->token);
 
             return $this->success([
-                'user'         => new UserResource($result['user']),
+                'user' => new UserResource($result['user']),
                 'access_token' => $result['token'],
-                'token_type'   => 'Bearer',
+                'token_type' => 'Bearer',
             ], 'Login realizado com sucesso');
         } catch (\Exception $e) {
             LogHelper::warning('Tentativa de login com token inválido', [
-                'ip'         => $request->ip(),
+                'ip' => $request->ip(),
                 'user_agent' => $request->userAgent(),
-                'reason'     => $e->getMessage(),
+                'reason' => $e->getMessage(),
             ]);
 
             return $this->error('Token do Google inválido ou expirado', [], 401);

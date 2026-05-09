@@ -36,9 +36,9 @@ class UserSiteController extends Controller
 
         LogHelper::info('User site criado', [
             'user_site_id' => $site->id,
-            'user_id'      => auth()->id(),
-            'name'         => $site->name,
-            'url'          => $site->url,
+            'user_id' => auth()->id(),
+            'name' => $site->name,
+            'url' => $site->url,
         ]);
 
         return $this->success(new UserSiteResource($site), 'Site criado com sucesso', 201);
@@ -67,8 +67,8 @@ class UserSiteController extends Controller
 
         LogHelper::info('User site atualizado', [
             'user_site_id' => $site->id,
-            'user_id'      => auth()->id(),
-            'fields'       => array_keys($request->validated()),
+            'user_id' => auth()->id(),
+            'fields' => array_keys($request->validated()),
         ]);
 
         return $this->success(new UserSiteResource($site), 'Site atualizado com sucesso');
@@ -82,15 +82,15 @@ class UserSiteController extends Controller
             return $this->error('Site não encontrado', [], 404);
         }
 
-        $siteId   = $site->id;
+        $siteId = $site->id;
         $siteName = $site->name;
 
         $site->delete();
 
         LogHelper::info('User site removido', [
             'user_site_id' => $siteId,
-            'user_id'      => auth()->id(),
-            'name'         => $siteName,
+            'user_id' => auth()->id(),
+            'name' => $siteName,
         ]);
 
         return $this->success(null, 'Site removido com sucesso');

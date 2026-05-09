@@ -22,8 +22,8 @@ class StoreUserContentRequest extends BaseFormRequest
                 Rule::unique('user_contents', 'content_id')
                     ->where('user_id', auth()->id()),
             ],
-            'site_id'       => ['nullable', 'integer', 'exists:sites,id'],
-            'user_site_id'  => [
+            'site_id' => ['nullable', 'integer', 'exists:sites,id'],
+            'user_site_id' => [
                 'nullable',
                 'integer',
                 Rule::exists('user_sites', 'id')->where('user_id', auth()->id()),

@@ -10,14 +10,15 @@ class LogController extends Controller
 {
     use ApiResponse;
 
-    private const MAX_CHARS      = 50_000;
+    private const MAX_CHARS = 50_000;
+
     private const AVAILABLE_LOGS = ['laravel', 'errors', 'access'];
 
     public function index(Request $request): JsonResponse
     {
         $type = $request->query('type', 'laravel');
 
-        if (!in_array($type, self::AVAILABLE_LOGS, true)) {
+        if (! in_array($type, self::AVAILABLE_LOGS, true)) {
             return $this->error(
                 'Tipo de log inválido. Valores aceitos: '.implode(', ', self::AVAILABLE_LOGS)
             );
@@ -25,23 +26,23 @@ class LogController extends Controller
 
         $path = storage_path('logs/'.$type.'.log');
 
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             return $this->success([
-                'type'    => $type,
+                'type' => $type,
                 'content' => '',
-                'size'    => 0,
-                'lines'   => 0,
+                'size' => 0,
+                'lines' => 0,
             ], 'Arquivo de log ainda não gerado.');
         }
 
-        $limit   = min((int) $request->query('limit', self::MAX_CHARS), self::MAX_CHARS);
-        $size    = filesize($path);
+        $limit = min((int) $request->query('limit', self::MAX_CHARS), self::MAX_CHARS);
+        $size = filesize($path);
         $content = $this->tail($path, $limit);
 
         return $this->success([
-            'type'      => $type,
-            'content'   => $content,
-            'size'      => $size,
+            'type' => $type,
+            'content' => $content,
+            'size' => $size,
             'truncated' => $size > $limit,
         ]);
     }
@@ -50,12 +51,12 @@ class LogController extends Controller
     {
         $handle = fopen($path, 'r');
 
-        if (!$handle) {
+        if (! $handle) {
             return '';
         }
 
         $fileSize = filesize($path);
-        $offset   = max(0, $fileSize - $chars);
+        $offset = max(0, $fileSize - $chars);
 
         fseek($handle, $offset);
         $content = fread($handle, $chars);

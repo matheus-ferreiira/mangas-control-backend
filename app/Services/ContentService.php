@@ -6,14 +6,16 @@ use App\Helpers\LogHelper;
 use App\Helpers\NameHelper;
 use App\Models\Content;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\DB;
 
 class ContentService
 {
-    private const SORTABLE       = ['updated_at', 'created_at', 'name', 'rating', 'popularity', 'votes_count', 'score', 'release_year'];
+    private const SORTABLE = ['updated_at', 'created_at', 'name', 'rating', 'popularity', 'votes_count', 'score', 'release_year'];
+
     private const SORT_NULL_LAST = ['rating', 'popularity', 'votes_count', 'score'];
-    private const DEFAULT_SORT   = 'popularity';
-    private const MAX_PER_PAGE   = 100;
+
+    private const DEFAULT_SORT = 'popularity';
+
+    private const MAX_PER_PAGE = 100;
 
     public function getContents(array $filters, ?int $userId = null): LengthAwarePaginator
     {
@@ -99,8 +101,8 @@ class ContentService
             $searchTerm = NameHelper::normalize($filters['search']);
             $query->where(function ($q) use ($searchTerm) {
                 $q->whereRaw('LOWER(name) LIKE ?', ["%{$searchTerm}%"])
-                  ->orWhereRaw("JSON_SEARCH(LOWER(alternative_names), 'one', ?) IS NOT NULL", ["%{$searchTerm}%"])
-                  ->orWhereRaw('LOWER(synopsis) LIKE ?', ["%{$searchTerm}%"]);
+                    ->orWhereRaw("JSON_SEARCH(LOWER(alternative_names), 'one', ?) IS NOT NULL", ["%{$searchTerm}%"])
+                    ->orWhereRaw('LOWER(synopsis) LIKE ?', ["%{$searchTerm}%"]);
             });
         }
 
@@ -122,7 +124,7 @@ class ContentService
                 ["{$searchTerm}%", "%{$searchTerm}%", "%{$searchTerm}%"]
             );
         } else {
-            $sort  = in_array($filters['sort'] ?? '', self::SORTABLE) ? $filters['sort'] : self::DEFAULT_SORT;
+            $sort = in_array($filters['sort'] ?? '', self::SORTABLE) ? $filters['sort'] : self::DEFAULT_SORT;
             $order = ($filters['order'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
 
             if (in_array($sort, self::SORT_NULL_LAST)) {
@@ -160,7 +162,7 @@ class ContentService
             $altExists = (clone $query)
                 ->where(function ($q) use ($check) {
                     $q->whereRaw('LOWER(TRIM(name)) = ?', [$check])
-                      ->orWhereRaw("JSON_SEARCH(LOWER(alternative_names), 'one', ?) IS NOT NULL", [$check]);
+                        ->orWhereRaw("JSON_SEARCH(LOWER(alternative_names), 'one', ?) IS NOT NULL", [$check]);
                 })
                 ->exists();
 

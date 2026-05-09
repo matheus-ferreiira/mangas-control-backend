@@ -67,8 +67,9 @@ Route::get('/logs', [LogController::class, 'index']);
 Route::get('/db-test', function () {
     try {
         DB::connection()->getPdo();
+
         return 'DB OK';
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         return $e->getMessage();
     }
 });
