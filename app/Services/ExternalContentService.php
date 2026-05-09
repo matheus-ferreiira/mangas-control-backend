@@ -428,7 +428,7 @@ class ExternalContentService
         $source = $data['source'] ?? null;
         $extId = $data['external_id'] ?? null;
         $label = $data['origin_type'] ?? $type;
-        $existing = $this->findExisting($name, $altNames, $source, $extId);
+        $existing = $this->findExisting($name, $altNames, $source, $extId, $type);
 
         if ($existing) {
             if (! $force) {
@@ -457,9 +457,11 @@ class ExternalContentService
         string $name,
         array $altNames,
         ?string $source,
-        ?string $externalId
+        ?string $externalId,
+        string $type
     ): ?Content {
         // 1ª prioridade: source + external_id (lookup por índice — mais rápido e preciso)
+        // Não precisa de filtro por type: MAL IDs de anime ≠ MAL IDs de manga
         if ($source && $externalId) {
             $record = Content::where('source', $source)
                 ->where('external_id', $externalId)
@@ -470,13 +472,16 @@ class ExternalContentService
             }
         }
 
-        // 2ª prioridade: nome normalizado
-        $record = Content::whereRaw('LOWER(TRIM(name)) = ?', [NameHelper::normalize($name)])->first();
+        // 2ª prioridade: nome normalizado, escopo por type
+        // Evita conflação entre adaptações (ex: "Attack on Titan" manga ≠ anime)
+        $record = Content::whereRaw('LOWER(TRIM(name)) = ?', [NameHelper::normalize($name)])
+            ->where('type', $type)
+            ->first();
         if ($record) {
             return $record;
         }
 
-        // 3ª prioridade: nomes alternativos (busca case-insensitive via JSON_SEARCH)
+        // 3ª prioridade: nomes alternativos, escopo por type
         foreach ($altNames as $alt) {
             $normalized = NameHelper::normalize($alt);
             if (! $normalized) {
@@ -486,7 +491,7 @@ class ExternalContentService
             $record = Content::whereRaw(
                 "JSON_SEARCH(LOWER(alternative_names), 'one', ?) IS NOT NULL",
                 [$normalized]
-            )->first();
+            )->where('type', $type)->first();
 
             if ($record) {
                 return $record;

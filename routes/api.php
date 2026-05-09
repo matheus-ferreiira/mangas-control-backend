@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ContentController;
 use App\Http\Controllers\ContentRequestController;
+use App\Http\Controllers\DiscoverController;
 use App\Http\Controllers\LogController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\UserContentController;
@@ -22,6 +23,8 @@ Route::prefix('auth')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
+
+    Route::get('/discover/home', [DiscoverController::class, 'home']);
 
     Route::apiResource('contents', ContentController::class);
     Route::apiResource('sites', SiteController::class);
