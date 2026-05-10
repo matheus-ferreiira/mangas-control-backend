@@ -15,7 +15,7 @@ class StoreUserSiteRequest extends BaseFormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'url' => ['required', 'url', 'max:500'],
+            'url' => ['nullable', 'url', 'max:500'],
             'is_favorite' => ['boolean'],
         ];
     }
@@ -23,6 +23,10 @@ class StoreUserSiteRequest extends BaseFormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($v) {
+            if (! $this->url) {
+                return;
+            }
+
             $exists = UserSite::where('user_id', auth()->id())
                 ->where('url', $this->url)
                 ->exists();
