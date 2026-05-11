@@ -15,6 +15,7 @@ class Content extends Model
         'status',
         'total_units',
         'total_seasons',
+        'season_episodes',
         'last_unit_update',
         'rating',
         'popularity',
@@ -55,6 +56,7 @@ class Content extends Model
         'votes_count' => 'integer',
         'release_year' => 'integer',
         'total_seasons' => 'integer',
+        'season_episodes' => 'array',
         'duration' => 'integer',
         'is_adult' => 'boolean',
     ];

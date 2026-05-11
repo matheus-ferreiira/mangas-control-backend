@@ -13,6 +13,7 @@ class UserContent extends Model
         'site_id',
         'user_site_id',
         'current_units',
+        'current_season',
         'last_unit_update',
         'rating',
         'status',
@@ -20,6 +21,7 @@ class UserContent extends Model
 
     protected $casts = [
         'current_units' => 'integer',
+        'current_season' => 'integer',
         'rating' => 'float',
         'last_unit_update' => 'datetime',
     ];
