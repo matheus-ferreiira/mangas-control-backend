@@ -37,6 +37,7 @@ class ContentResource extends JsonResource
             // Conteúdo
             'total_units' => $this->total_units,
             'total_seasons' => $this->total_seasons,
+            'season_episodes' => $this->season_episodes ?? null,
             'duration' => $this->duration,
             'duration_formatted' => $this->formatDuration($this->duration),
             'last_unit_update' => $this->last_unit_update,
