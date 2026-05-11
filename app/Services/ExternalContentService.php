@@ -566,25 +566,29 @@ class ExternalContentService
         }
     }
 
+    // In-process cache: avoids DB pollution during bulk import runs.
+    private array $tmdbDetailCache = [];
+
     /**
      * Detalhes de um item TMDb com append_to_response=videos.
-     * Cache de 30min para não repetir requests na mesma sessão de import.
+     * Usa cache em memória (array) para não repetir requests na mesma sessão de import
+     * sem salvar nada na tabela cache do banco.
      */
     private function fetchTmdbDetails(string $mediaType, int $id, string $apiKey): array
     {
-        return Cache::remember(
-            "tmdb.detail.{$mediaType}.{$id}",
-            now()->addMinutes(30),
-            function () use ($mediaType, $id, $apiKey) {
-                $response = Http::retry(3, 500)
-                    ->get(self::TMDB_BASE."/{$mediaType}/{$id}", [
-                        'api_key' => $apiKey,
-                        'append_to_response' => 'videos,content_ratings,release_dates',
-                    ]);
+        $key = "{$mediaType}.{$id}";
 
-                return $response->successful() ? $response->json() : [];
-            }
-        );
+        if (isset($this->tmdbDetailCache[$key])) {
+            return $this->tmdbDetailCache[$key];
+        }
+
+        $response = Http::retry(3, 500)
+            ->get(self::TMDB_BASE."/{$mediaType}/{$id}", [
+                'api_key' => $apiKey,
+                'append_to_response' => 'videos,content_ratings,release_dates',
+            ]);
+
+        return $this->tmdbDetailCache[$key] = $response->successful() ? $response->json() : [];
     }
 
     /**
