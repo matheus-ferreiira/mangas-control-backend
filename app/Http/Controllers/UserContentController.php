@@ -87,10 +87,25 @@ class UserContentController extends Controller
         $this->ensureOwnership($userContent);
 
         $userContent->load('content');
-        $total = $userContent->content?->total_units;
+        $content = $userContent->content;
 
-        if ($total !== null && ($userContent->current_units + 1) > $total) {
-            return $this->error("Você já atingiu o total de episódios/capítulos ({$total}).", [], 422);
+        // For TV shows with per-season data, limit by the current season's episode count
+        if ($content?->type === 'tv' && ! empty($content->season_episodes)) {
+            $season = $userContent->current_season ?? 1;
+            $seasonLimit = $content->season_episodes[(string) $season] ?? null;
+
+            if ($seasonLimit !== null && ($userContent->current_units + 1) > $seasonLimit) {
+                return $this->error(
+                    "Fim da temporada {$season} ({$seasonLimit} eps). Avance para a próxima temporada.",
+                    [],
+                    422
+                );
+            }
+        } else {
+            $total = $content?->total_units;
+            if ($total !== null && ($userContent->current_units + 1) > $total) {
+                return $this->error("Você já atingiu o total de episódios/capítulos ({$total}).", [], 422);
+            }
         }
 
         $previous = $userContent->current_units;
