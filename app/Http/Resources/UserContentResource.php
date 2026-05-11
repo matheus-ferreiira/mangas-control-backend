@@ -29,9 +29,14 @@ class UserContentResource extends JsonResource
     private function computeProgressPercent(): ?float
     {
         $current = $this->current_units;
-        $total = $this->resource->relationLoaded('content')
-            ? ($this->resource->content?->total_units ?? null)
-            : null;
+        $content = $this->resource->relationLoaded('content') ? $this->resource->content : null;
+
+        if ($content?->type === 'tv' && ! empty($content->season_episodes)) {
+            $season = (string) ($this->current_season ?? 1);
+            $total = $content->season_episodes[$season] ?? $content->total_units ?? null;
+        } else {
+            $total = $content?->total_units ?? null;
+        }
 
         if ($current === null || ! $total || $total <= 0) {
             return null;
