@@ -386,6 +386,7 @@ class ExternalContentService
                         'studios' => $detail ? $this->extractTmdbStudios($detail) : null,
                         'tagline' => $detail ? ($detail['tagline'] ?: null) : null,
                         'networks' => $detail ? $this->extractTmdbNetworks($detail) : null,
+                        'season_episodes' => $detail ? $this->extractSeasonEpisodes($detail) : null,
                         'demographics' => null,
                         'themes' => null,
                         'release_year' => $this->extractYearFromDate($item['first_air_date'] ?? null),
@@ -766,6 +767,31 @@ class ExternalContentService
             ->all();
 
         return ! empty($names) ? $names : null;
+    }
+
+    /**
+     * Extrai episódios por temporada do detalhe TMDb.
+     * Retorna ["1" => 10, "2" => 13, ...] ignorando season 0 (especiais).
+     */
+    private function extractSeasonEpisodes(array $detail): ?array
+    {
+        if (empty($detail['seasons'])) {
+            return null;
+        }
+
+        $result = [];
+        foreach ($detail['seasons'] as $season) {
+            $num = $season['season_number'] ?? null;
+            $count = $season['episode_count'] ?? 0;
+
+            if ($num === null || $num < 1 || $count < 1) {
+                continue;
+            }
+
+            $result[(string) $num] = (int) $count;
+        }
+
+        return ! empty($result) ? $result : null;
     }
 
     /**
