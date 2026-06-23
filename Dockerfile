@@ -1,65 +1,55 @@
-FROM php:8.2-fpm-alpine
+FROM php:8.2-apache
 
 # Dependências do sistema
-RUN apk add --no-cache \
-    nginx \
-    supervisor \
-    curl \
+RUN apt-get update && apt-get install -y \
+    libzip-dev \
     zip \
     unzip \
     git \
-    mysql-client \
-    nodejs \
-    npm
-
-# Extensões PHP
-RUN docker-php-ext-install pdo pdo_mysql bcmath opcache
+    curl \
+    && docker-php-ext-install pdo pdo_mysql zip opcache \
+    && a2enmod rewrite headers \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
-# Copiar arquivos de dependência primeiro (cache de layers)
+# Copiar dependências primeiro (cache de layers)
 COPY composer.json composer.lock ./
-
-# Instalar dependências sem scripts (scripts precisam dos arquivos do app)
 RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist
 
 # Copiar o restante do código
 COPY . .
 
 # Finalizar composer
-RUN composer dump-autoload --optimize && \
-    composer run-script post-autoload-dump || true
+RUN composer dump-autoload --optimize
 
 # Permissões
-RUN chown -R www-data:www-data /var/www/html/storage \
-    /var/www/html/bootstrap/cache && \
-    chmod -R 775 /var/www/html/storage \
-    /var/www/html/bootstrap/cache
+RUN chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
 
-# Configuração nginx
-RUN echo 'server { \
-    listen 80; \
-    root /var/www/html/public; \
-    index index.php; \
-    location / { try_files $uri $uri/ /index.php?$query_string; } \
-    location ~ \.php$ { \
-        fastcgi_pass 127.0.0.1:9000; \
-        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name; \
-        include fastcgi_params; \
-    } \
-}' > /etc/nginx/http.d/default.conf
+# Apache: apontar DocumentRoot para /public
+ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 
-# Supervisor para rodar nginx + php-fpm juntos
-RUN echo '[supervisord]\nnodaemon=true\n\
-[program:php-fpm]\ncommand=php-fpm\nautostart=true\nautorestart=true\n\
-[program:nginx]\ncommand=nginx -g "daemon off;"\nautostart=true\nautorestart=true' \
-> /etc/supervisord.conf
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
+    /etc/apache2/sites-available/*.conf \
+    && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' \
+    /etc/apache2/apache2.conf \
+    /etc/apache2/conf-available/*.conf
+
+# Habilitar .htaccess (AllowOverride All)
+RUN echo '<Directory ${APACHE_DOCUMENT_ROOT}>\n\
+    Options Indexes FollowSymLinks\n\
+    AllowOverride All\n\
+    Require all granted\n\
+</Directory>' >> /etc/apache2/apache2.conf
 
 EXPOSE 80
 
-CMD ["sh", "-c", "php artisan config:clear && \
-    php artisan migrate --force && \
-    supervisord -c /etc/supervisord.conf"]
+CMD ["sh", "-c", \
+    "php artisan config:clear && \
+     php artisan migrate --force && \
+     apache2-foreground"]
