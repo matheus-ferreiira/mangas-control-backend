@@ -40,13 +40,15 @@ class AniListContentService
         int $pages = 1,
         bool $force = false,
         bool $includeAdult = false,
-        bool $enrich = true
+        bool $enrich = true,
+        ?string $countryOfOrigin = null,
+        ?string $format = null
     ): int {
         $imported = 0;
 
         for ($page = 1; $page <= $pages; $page++) {
             try {
-                $media = $this->client->fetchPage($aniListType, $page, $includeAdult);
+                $media = $this->client->fetchPage($aniListType, $page, $includeAdult, $countryOfOrigin, $format);
             } catch (\Throwable $e) {
                 $log("[AVISO] AniList página {$page}: ".$e->getMessage());
                 break;

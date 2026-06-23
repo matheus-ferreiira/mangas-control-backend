@@ -37,6 +37,16 @@ class ContentService
             $query->whereIn('type', (array) $filters['type']);
         }
 
+        // Filtro de origem (manga/manhwa/manhua) — só faz sentido p/ type=manga
+        if (! empty($filters['origin_type'])) {
+            $query->whereIn('origin_type', (array) $filters['origin_type']);
+        }
+
+        // Filtro de formato AniList (novel, one_shot, manga, etc.)
+        if (! empty($filters['format'])) {
+            $query->whereIn('format', (array) $filters['format']);
+        }
+
         if (! empty($filters['status'])) {
             $query->whereIn('status', (array) $filters['status']);
         }

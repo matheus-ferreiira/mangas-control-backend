@@ -29,7 +29,7 @@ class ContentController extends Controller
     public function index(Request $request): JsonResponse
     {
         $filters = $request->only([
-            'type', 'status', 'search', 'genres', 'year', 'year_min', 'year_max',
+            'type', 'origin_type', 'format', 'status', 'search', 'genres', 'year', 'year_min', 'year_max',
             'sort', 'order', 'per_page', 'recent',
             'rating_min', 'rating_max', 'votes_min',
             'language', 'country', 'is_adult',

@@ -18,7 +18,9 @@ class ImportContentsCommand extends Command
                             {--pages=1   : Número de páginas a importar (AniList=50/pág, TMDb=20/pág)}
                             {--force     : Atualiza registros já existentes com novos dados da API}
                             {--details   : (TMDb apenas) busca detalhes por item (duration, trailer, status real)}
-                            {--adult     : Inclui conteúdo adulto (AniList sem filtro isAdult; TMDb include_adult). Off por padrão}';
+                            {--adult     : Inclui conteúdo adulto (AniList sem filtro isAdult; TMDb include_adult). Off por padrão}
+                            {--origin=   : (manga) origem via countryOfOrigin: manga=JP, manhwa=KR, manhua=CN}
+                            {--format=   : (manga) MediaFormat AniList: MANGA, NOVEL, ONE_SHOT (NOVEL salva type=novel)}';
 
     protected $description = 'Importa conteúdos de APIs externas (AniList p/ anime/mangá, TMDb p/ filmes/séries)';
 
@@ -29,11 +31,37 @@ class ImportContentsCommand extends Command
         $force = (bool) $this->option('force');
         $details = (bool) $this->option('details');
         $adult = (bool) $this->option('adult');
+        $origin = $this->option('origin');
+        $format = $this->option('format');
+        $format = $format !== null ? strtoupper($format) : null;
 
         if ($type && ! in_array($type, ['anime', 'manga', 'movie', 'tv'], true)) {
             $this->error("Tipo inválido: \"{$type}\". Use: anime, manga, movie ou tv.");
 
             return Command::FAILURE;
+        }
+
+        // --origin → countryOfOrigin da AniList (só manga)
+        $originCountry = null;
+        if ($origin !== null) {
+            $map = ['manga' => 'JP', 'manhwa' => 'KR', 'manhua' => 'CN'];
+            if (! isset($map[$origin])) {
+                $this->error("Origin inválida: \"{$origin}\". Use: manga, manhwa ou manhua.");
+
+                return Command::FAILURE;
+            }
+            $originCountry = $map[$origin];
+        }
+
+        // --format → MediaFormat da AniList (manhwa/manhua NÃO são format; use --origin)
+        if ($format !== null && ! in_array($format, ['MANGA', 'NOVEL', 'ONE_SHOT'], true)) {
+            $this->error("Format inválido: \"{$format}\". Use: MANGA, NOVEL ou ONE_SHOT. (Para manhwa/manhua use --origin.)");
+
+            return Command::FAILURE;
+        }
+
+        if (($origin !== null || $format !== null) && $type && $type !== 'manga') {
+            $this->warn('--origin/--format aplicam-se apenas a --type=manga; ignorados nos demais tipos.');
         }
 
         if ($force) {
@@ -54,7 +82,12 @@ class ImportContentsCommand extends Command
 
             $imported = match ($t) {
                 'anime' => $aniList->importMedia($log, 'ANIME', 'anime', $pages, $force, $adult),
-                'manga' => $aniList->importMedia($log, 'MANGA', 'manga', $pages, $force, $adult),
+                'manga' => $aniList->importMedia(
+                    $log, 'MANGA',
+                    $format === 'NOVEL' ? 'novel' : 'manga',
+                    $pages, $force, $adult, true,
+                    $originCountry, $format
+                ),
                 'movie' => $tmdb->importMovies($log, 1, $pages, $force, $details, $adult),
                 'tv' => $tmdb->importTV($log, 1, $pages, $force, $details, $adult),
             };

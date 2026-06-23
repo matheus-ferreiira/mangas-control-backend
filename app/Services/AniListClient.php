@@ -105,15 +105,19 @@ class AniListClient
      *                              dominam o ranking). isAdult:true garante conteúdo +18.
      * @return array<int, array>  data.Page.media[]
      */
-    public function fetchPage(string $type, int $page = 1, bool $includeAdult = false): array
+    public function fetchPage(string $type, int $page = 1, bool $includeAdult = false, ?string $countryOfOrigin = null, ?string $format = null): array
     {
         $adultFilter = $includeAdult ? ', isAdult: true' : ', isAdult: false';
+        // countryOfOrigin é o scalar CountryCode (string ISO 3166-1 alpha-2): "KR"/"CN"/"JP".
+        $countryFilter = $countryOfOrigin ? ', countryOfOrigin: "'.$countryOfOrigin.'"' : '';
+        // format é o enum MediaFormat (sem aspas): NOVEL/MANGA/ONE_SHOT.
+        $formatFilter = $format ? ', format: '.$format : '';
 
         $fields = self::MEDIA_FIELDS;
         $query = <<<GQL
         query (\$page: Int, \$type: MediaType) {
             Page(page: \$page, perPage: 50) {
-                media(type: \$type, sort: POPULARITY_DESC{$adultFilter}) {
+                media(type: \$type, sort: POPULARITY_DESC{$adultFilter}{$countryFilter}{$formatFilter}) {
                     {$fields}
                 }
             }
