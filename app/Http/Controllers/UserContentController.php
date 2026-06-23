@@ -60,6 +60,20 @@ class UserContentController extends Controller
 
         $data = $request->validated();
 
+        // Auto-preenchimento ao marcar como Completo — garante consistência mesmo
+        // se o frontend não enviar current_units/current_season (espelha o frontend).
+        if (($data['status'] ?? null) === 'completed') {
+            $content = $userContent->content()->first();
+            if ($content) {
+                if (! empty($content->total_units)) {
+                    $data['current_units'] = $content->total_units;
+                }
+                if (! empty($content->total_seasons)) {
+                    $data['current_season'] = $content->total_seasons;
+                }
+            }
+        }
+
         if (array_key_exists('current_units', $data)) {
             $data['last_unit_update'] = now();
         }

@@ -16,9 +16,14 @@ class DiscoverService
 
     public function getHome(int $userId): array
     {
-        $publicSections = Cache::remember('discover.home.public.v2', self::PUBLIC_CACHE_TTL, fn () => $this->loadPublicSections());
+        // Filtro global de conteúdo adulto (perfil). Dois buckets de cache público:
+        // SFW (a0) e completo (a1) — evita explosão de cache por usuário.
+        $showAdult = (bool) (optional(\App\Models\User::find($userId))->show_adult_content ?? false);
+        $a = $showAdult ? 1 : 0;
 
-        $personalData = Cache::remember("discover.home.user.{$userId}.v2", self::USER_CACHE_TTL, fn () => $this->loadPersonalSections($userId));
+        $publicSections = Cache::remember("discover.home.public.v2.a{$a}", self::PUBLIC_CACHE_TTL, fn () => $this->loadPublicSections($showAdult));
+
+        $personalData = Cache::remember("discover.home.user.{$userId}.v2.a{$a}", self::USER_CACHE_TTL, fn () => $this->loadPersonalSections($userId, $showAdult));
 
         // Tag public catalog items with is_in_library per user
         $inLibrary = array_flip(UserContent::where('user_id', $userId)->pluck('content_id')->toArray());
@@ -48,44 +53,48 @@ class DiscoverService
         return $result;
     }
 
-    private function loadPublicSections(): array
+    private function loadPublicSections(bool $showAdult = false): array
     {
+        // Builder-base: aplica o filtro global de adulto a TODAS as seções da home.
+        $base = fn () => Content::query()
+            ->when(! $showAdult, fn ($q) => $q->where('is_adult', false));
+
         // Featured: random from top 8 by score to add variety
-        $topEight = Content::whereNotNull('cover')
+        $topEight = $base()->whereNotNull('cover')
             ->orderByRaw('CASE WHEN score IS NULL THEN 1 ELSE 0 END, score DESC')
             ->limit(8)
             ->get();
         $featured = $topEight->isNotEmpty() ? $topEight->random() : null;
 
         // Trending: by popularity, mixed types
-        $trending = Content::whereNotNull('cover')
+        $trending = $base()->whereNotNull('cover')
             ->orderByRaw('CASE WHEN popularity IS NULL THEN 1 ELSE 0 END, popularity DESC')
             ->limit(12)
             ->get();
 
         // Top anime by score
-        $topAnime = Content::where('type', 'anime')
+        $topAnime = $base()->where('type', 'anime')
             ->whereNotNull('cover')
             ->orderByRaw('CASE WHEN score IS NULL THEN 1 ELSE 0 END, score DESC')
             ->limit(12)
             ->get();
 
         // Popular manga by popularity
-        $popularManga = Content::where('type', 'manga')
+        $popularManga = $base()->where('type', 'manga')
             ->whereNotNull('cover')
             ->orderByRaw('CASE WHEN popularity IS NULL THEN 1 ELSE 0 END, popularity DESC')
             ->limit(12)
             ->get();
 
         // Movies & TV series
-        $moviesAndTv = Content::whereIn('type', ['movie', 'tv'])
+        $moviesAndTv = $base()->whereIn('type', ['movie', 'tv'])
             ->whereNotNull('cover')
             ->orderByRaw('CASE WHEN score IS NULL THEN 1 ELSE 0 END, score DESC')
             ->limit(12)
             ->get();
 
         // Top rated overall (score >= 7.5)
-        $topRated = Content::whereNotNull('cover')
+        $topRated = $base()->whereNotNull('cover')
             ->whereNotNull('score')
             ->where('score', '>=', 7.5)
             ->orderBy('score', 'desc')
@@ -93,27 +102,28 @@ class DiscoverService
             ->get();
 
         // Recently updated chapters/episodes
-        $recentlyUpdated = Content::whereNotNull('cover')
-            ->whereNotNull('last_unit_update')
-            ->orderBy('last_unit_update', 'desc')
+        // (coluna `last_unit_update` de `contents` foi renomeada para `release_date`)
+        $recentlyUpdated = $base()->whereNotNull('cover')
+            ->whereNotNull('release_date')
+            ->orderBy('release_date', 'desc')
             ->limit(12)
             ->get();
 
         // New to catalog
-        $newAdditions = Content::whereNotNull('cover')
+        $newAdditions = $base()->whereNotNull('cover')
             ->orderBy('created_at', 'desc')
             ->limit(12)
             ->get();
 
         // Top novels
-        $topNovels = Content::where('type', 'novel')
+        $topNovels = $base()->where('type', 'novel')
             ->whereNotNull('cover')
             ->orderByRaw('CASE WHEN score IS NULL THEN 1 ELSE 0 END, score DESC')
             ->limit(10)
             ->get();
 
         // Completed works (good for binge)
-        $completedWorks = Content::whereNotNull('cover')
+        $completedWorks = $base()->whereNotNull('cover')
             ->where('status', 'completed')
             ->orderByRaw('CASE WHEN score IS NULL THEN 1 ELSE 0 END, score DESC')
             ->limit(12)
@@ -133,11 +143,12 @@ class DiscoverService
         ];
     }
 
-    private function loadPersonalSections(int $userId): array
+    private function loadPersonalSections(int $userId, bool $showAdult = false): array
     {
         // Continue watching/reading
         $inProgress = UserContent::where('user_id', $userId)
             ->where('status', 'reading')
+            ->when(! $showAdult, fn ($q) => $q->whereHas('content', fn ($c) => $c->where('is_adult', false)))
             ->with('content:id,name,cover,type,total_units')
             ->orderBy('updated_at', 'desc')
             ->limit(8)
@@ -167,6 +178,7 @@ class DiscoverService
         if (! empty($topGenres)) {
             $userContentIds = UserContent::where('user_id', $userId)->pluck('content_id');
             $recs = Content::whereNotNull('cover')
+                ->when(! $showAdult, fn ($q) => $q->where('is_adult', false))
                 ->whereNotIn('id', $userContentIds)
                 ->where(function ($q) use ($topGenres) {
                     foreach (array_slice($topGenres, 0, 3) as $genre) {

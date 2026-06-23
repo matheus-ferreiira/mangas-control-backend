@@ -36,8 +36,9 @@ class ContentController extends Controller
         ]);
 
         $userId = auth()->id();
+        $showAdult = (int) (bool) (optional(auth()->user())->show_adult_content ?? false);
         $version = Cache::get(self::CACHE_VERSION_KEY, 0);
-        $cacheKey = "api.contents.v{$version}.u{$userId}.".md5(json_encode($filters).'_p'.$request->get('page', 1));
+        $cacheKey = "api.contents.v{$version}.u{$userId}.a{$showAdult}.".md5(json_encode($filters).'_p'.$request->get('page', 1));
 
         $data = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($filters, $request, $userId) {
             $result = $this->contentService->getContents($filters, $userId);

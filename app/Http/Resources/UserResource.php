@@ -16,6 +16,7 @@ class UserResource extends JsonResource
             'email' => $this->email,
             'avatar' => $this->avatar,
             'role' => $this->role,
+            'show_adult_content' => (bool) $this->show_adult_content,
             'created_at' => $this->created_at,
         ];
     }

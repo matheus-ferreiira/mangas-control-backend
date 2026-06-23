@@ -94,6 +94,23 @@ class AuthController extends Controller
         return $this->success(new UserResource($request->user()));
     }
 
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'show_adult_content' => ['required', 'boolean'],
+        ]);
+
+        $user = $request->user();
+        $user->update($validated);
+
+        LogHelper::info('Perfil atualizado', [
+            'user_id' => $user->id,
+            'show_adult_content' => $user->show_adult_content,
+        ]);
+
+        return $this->success(new UserResource($user), 'Perfil atualizado');
+    }
+
     public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
     {
         try {

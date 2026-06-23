@@ -1,0 +1,21 @@
+# Dependências regeneradas no build
+/vendor
+/node_modules
+
+# Segredos e ambiente (Railway injeta via dashboard)
+.env
+.env.*
+!.env.example
+
+# Git e artefatos locais
+.git
+.gitignore
+limpar-cache.js
+package-lock.json
+
+# Storage volátil
+/storage/logs/*
+/storage/pail
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*

@@ -24,3 +24,7 @@ Homestead.yaml
 Thumbs.db
 .env
 .env.*
+!.env.example
+
+# Script utilitário local com credenciais — nunca commitar
+limpar-cache.js

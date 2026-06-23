@@ -13,3 +13,8 @@ Artisan::command('inspire', function () {
 Schedule::call(function () {
     DB::table('cache')->where('expiration', '<', time())->delete();
 })->daily()->name('cache:prune-expired')->withoutOverlapping();
+
+// Sincronização de conteúdos vinculados a usuários (novos eps/caps, status, temporadas).
+// DESATIVADO por padrão — descomente e ajuste a frequência conforme sua necessidade.
+// O comando respeita rate limit das APIs (AniList ~90/min, TMDb).
+// Schedule::command('content:sync-updates')->daily()->withoutOverlapping();

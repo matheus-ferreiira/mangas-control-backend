@@ -14,6 +14,8 @@ class ContentResource extends JsonResource
             // Identidade
             'id' => $this->id,
             'external_id' => $this->external_id,
+            'anilist_id' => $this->anilist_id,
+            'mal_id' => $this->mal_id,
             'source' => $this->source,
 
             // Nomes
@@ -21,14 +23,20 @@ class ContentResource extends JsonResource
             'alternative_names' => $this->alternative_names ?? [],
 
             // Mídia
+            // NOTA: a coluna `background` foi renomeada para `banner_image`. Mantemos a
+            // chave JSON `background` (consumida pelo frontend atual) e expomos também a
+            // nova chave `banner_image`. Mesma estratégia p/ last_unit_update → release_date.
             'cover' => $this->resolveUrl($this->cover),
-            'background' => $this->resolveUrl($this->background),
+            'background' => $this->resolveUrl($this->banner_image),
+            'banner_image' => $this->resolveUrl($this->banner_image),
             'trailer_url' => $this->trailer_url,
             'trailer_embed_url' => $this->buildEmbedUrl($this->trailer_url),
 
             // Classificação
             'type' => $this->type,
+            'format' => $this->format,
             'origin_type' => $this->origin_type,
+            'origin_source' => $this->origin_source,
             'status' => $this->status,
             'is_adult' => $this->is_adult,
             'age_rating' => $this->age_rating,
@@ -40,7 +48,9 @@ class ContentResource extends JsonResource
             'season_episodes' => $this->season_episodes ?? null,
             'duration' => $this->duration,
             'duration_formatted' => $this->formatDuration($this->duration),
-            'last_unit_update' => $this->last_unit_update,
+            'last_unit_update' => $this->release_date,
+            'release_date' => $this->release_date,
+            'end_date' => $this->end_date,
             'synopsis' => $this->synopsis,
             'tagline' => $this->tagline,
             'genres' => $this->genres ?? [],
@@ -59,6 +69,8 @@ class ContentResource extends JsonResource
             'votes_count' => $this->votes_count,
             'popularity' => $this->popularity,
             'score' => $this->score,
+            'mal_rank' => $this->mal_rank,
+            'mal_popularity_rank' => $this->mal_popularity_rank,
 
             // Timestamps
             'created_at' => $this->created_at,

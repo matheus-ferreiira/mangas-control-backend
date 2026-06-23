@@ -18,6 +18,12 @@ class UserContentService
         $query = UserContent::with(['content', 'site', 'userSite'])
             ->where('user_id', $userId);
 
+        // Filtro global de conteúdo adulto (perfil do usuário). Default: esconder +18.
+        $showAdult = (bool) (optional(auth()->user())->show_adult_content ?? false);
+        if (! $showAdult) {
+            $query->whereHas('content', fn ($q) => $q->where('is_adult', false));
+        }
+
         if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
