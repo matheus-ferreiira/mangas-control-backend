@@ -49,7 +49,8 @@ RUN echo '<Directory ${APACHE_DOCUMENT_ROOT}>\n\
 
 EXPOSE 80
 
-CMD ["sh", "-c", \
-    "php artisan config:clear && \
+CMD ["sh", "-c", "php artisan config:clear && \
      php artisan migrate --force && \
+     a2dismod mpm_event mpm_worker 2>/dev/null || true && \
+     a2enmod mpm_prefork && \
      apache2-foreground"]
