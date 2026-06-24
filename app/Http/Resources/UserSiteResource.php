@@ -13,6 +13,8 @@ class UserSiteResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'url' => $this->url,
+            'logo_url' => $this->logo_url,
+            'type' => $this->type ?? 'website',
             'is_favorite' => $this->is_favorite,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

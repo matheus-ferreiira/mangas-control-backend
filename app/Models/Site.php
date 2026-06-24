@@ -12,8 +12,8 @@ class Site extends Model
 
     protected $fillable = ['name', 'url'];
 
-    public function userMangas(): HasMany
+    public function userContents(): HasMany
     {
-        return $this->hasMany(UserManga::class);
+        return $this->hasMany(UserContent::class);
     }
 }

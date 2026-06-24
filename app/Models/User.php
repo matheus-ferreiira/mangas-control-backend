@@ -51,9 +51,4 @@ class User extends Authenticatable
     {
         return $this->hasMany(UserSite::class);
     }
-
-    public function contentRequests(): HasMany
-    {
-        return $this->hasMany(ContentRequest::class);
-    }
 }

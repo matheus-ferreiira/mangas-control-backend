@@ -16,6 +16,8 @@ class StoreUserSiteRequest extends BaseFormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'url' => ['nullable', 'url', 'max:500'],
+            'logo_url' => ['nullable', 'string', 'max:500'],
+            'type' => ['nullable', 'in:website,app'],
             'is_favorite' => ['boolean'],
         ];
     }

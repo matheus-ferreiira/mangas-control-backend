@@ -84,9 +84,4 @@ class Content extends Model
     {
         return $this->hasMany(UserContent::class);
     }
-
-    public function contentRequests(): HasMany
-    {
-        return $this->hasMany(ContentRequest::class);
-    }
 }

@@ -22,7 +22,7 @@ class UserContentController extends Controller
     {
         $userContents = $this->userContentService->getUserContents(
             auth()->id(),
-            $request->only(['type', 'status', 'content_id'])
+            $request->only(['type', 'status', 'content_id', 'user_site_id'])
         );
 
         return $this->success(UserContentResource::collection($userContents));
@@ -33,6 +33,13 @@ class UserContentController extends Controller
         $userContent = $this->userContentService->create(auth()->id(), $request->validated());
 
         return $this->success(new UserContentResource($userContent), 'Conteúdo adicionado à biblioteca', 201);
+    }
+
+    public function withUpdates(): JsonResponse
+    {
+        $items = $this->userContentService->getWithUpdates(auth()->id());
+
+        return $this->success(UserContentResource::collection($items));
     }
 
     public function show(int $id): JsonResponse
@@ -61,15 +68,26 @@ class UserContentController extends Controller
         $data = $request->validated();
 
         // Auto-preenchimento ao marcar como Completo — garante consistência mesmo
-        // se o frontend não enviar current_units/current_season (espelha o frontend).
+        // se o frontend não enviar current_units/current_season. Respeita os valores
+        // enviados pelo cliente; só preenche o que estiver ausente.
         if (($data['status'] ?? null) === 'completed') {
             $content = $userContent->content()->first();
             if ($content) {
-                if (! empty($content->total_units)) {
-                    $data['current_units'] = $content->total_units;
-                }
-                if (! empty($content->total_seasons)) {
+                if (! array_key_exists('current_season', $data) && ! empty($content->total_seasons)) {
                     $data['current_season'] = $content->total_seasons;
+                }
+
+                if (! array_key_exists('current_units', $data)) {
+                    // Série com episódios por temporada: usa a última temporada;
+                    // demais tipos: usa o total geral.
+                    $seasonEpisodes = $content->season_episodes ?? [];
+                    $lastSeason = $content->total_seasons;
+
+                    if ($content->type === 'tv' && $lastSeason && isset($seasonEpisodes[(string) $lastSeason])) {
+                        $data['current_units'] = (int) $seasonEpisodes[(string) $lastSeason];
+                    } elseif (! empty($content->total_units)) {
+                        $data['current_units'] = $content->total_units;
+                    }
                 }
             }
         }

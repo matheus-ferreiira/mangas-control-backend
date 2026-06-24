@@ -2,58 +2,39 @@
 
 namespace App\Services;
 
-use App\Helpers\LogHelper;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
+use RuntimeException;
 
 class SupabaseStorageService
 {
-    protected Client $client;
-
-    protected string $url;
-
-    protected string $key;
-
-    protected string $bucket = 'covers';
-
-    public function __construct()
+    /**
+     * Faz upload de um arquivo para um bucket público do Supabase Storage
+     * (opcionalmente dentro de uma pasta) e retorna a URL pública.
+     */
+    public function upload(UploadedFile $file, string $bucket, string $folder = ''): string
     {
-        $this->client = new Client;
-        $this->url = config('services.supabase.url');
-        $this->key = config('services.supabase.key');
-    }
+        $baseUrl = rtrim((string) config('services.supabase.url'), '/');
+        $key = (string) config('services.supabase.key');
 
-    public function upload($file): string
-    {
-        $filename = uniqid().'.'.$file->getClientOriginalExtension();
-        $path = "covers/{$filename}";
-        $endpoint = "{$this->url}/storage/v1/object/{$this->bucket}/{$path}";
-
-        try {
-            $this->client->post($endpoint, [
-                'headers' => [
-                    'Authorization' => "Bearer {$this->key}",
-                    'Content-Type' => $file->getMimeType(),
-                ],
-                'body' => fopen($file->getRealPath(), 'r'),
-            ]);
-        } catch (RequestException $e) {
-            LogHelper::error('Falha no upload para o Supabase', [
-                'filename' => $filename,
-                'original_name' => $file->getClientOriginalName(),
-                'http_status' => $e->getResponse()?->getStatusCode(),
-            ], $e);
-
-            throw $e;
+        if ($baseUrl === '' || $key === '') {
+            throw new RuntimeException('Supabase não configurado (SUPABASE_URL/SUPABASE_KEY).');
         }
 
-        $publicUrl = "{$this->url}/storage/v1/object/public/{$this->bucket}/{$path}";
+        $ext = strtolower($file->getClientOriginalExtension() ?: ($file->guessExtension() ?: 'bin'));
+        $name = Str::uuid()->toString().'.'.$ext;
+        $path = $folder !== '' ? trim($folder, '/').'/'.$name : $name;
+        $contentType = $file->getMimeType() ?: 'application/octet-stream';
 
-        LogHelper::info('Upload concluído no Supabase', [
-            'filename' => $filename,
-            'url' => $publicUrl,
-        ]);
+        $response = Http::withToken($key)
+            ->withBody((string) file_get_contents($file->getRealPath()), $contentType)
+            ->post("{$baseUrl}/storage/v1/object/{$bucket}/{$path}");
 
-        return $publicUrl;
+        if (! $response->successful()) {
+            throw new RuntimeException('Falha no upload para o Supabase (HTTP '.$response->status().').');
+        }
+
+        return "{$baseUrl}/storage/v1/object/public/{$bucket}/{$path}";
     }
 }

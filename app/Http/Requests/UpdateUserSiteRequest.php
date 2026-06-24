@@ -16,6 +16,8 @@ class UpdateUserSiteRequest extends BaseFormRequest
         return [
             'name' => ['sometimes', 'string', 'max:255'],
             'url' => ['sometimes', 'nullable', 'url', 'max:500'],
+            'logo_url' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'type' => ['sometimes', 'in:website,app'],
             'is_favorite' => ['boolean'],
         ];
     }

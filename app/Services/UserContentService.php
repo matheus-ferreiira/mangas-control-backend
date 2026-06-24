@@ -36,7 +36,33 @@ class UserContentService
             $query->where('content_id', (int) $filters['content_id']);
         }
 
+        if (! empty($filters['user_site_id'])) {
+            $query->where('user_site_id', (int) $filters['user_site_id']);
+        }
+
         return $query->orderByDesc('updated_at')->paginate(9999);
+    }
+
+    /**
+     * Itens da biblioteca cujo conteúdo no catálogo foi atualizado DEPOIS da última
+     * interação do usuário, nos últimos 7 dias (novidades ainda não acompanhadas).
+     */
+    public function getWithUpdates(int $userId): \Illuminate\Support\Collection
+    {
+        $showAdult = (bool) (optional(auth()->user())->show_adult_content ?? false);
+
+        return UserContent::query()
+            ->with(['content', 'site', 'userSite'])
+            ->join('contents', 'contents.id', '=', 'user_contents.content_id')
+            ->where('user_contents.user_id', $userId)
+            ->whereNotIn('user_contents.status', ['completed', 'dropped'])
+            ->when(! $showAdult, fn ($q) => $q->where('contents.is_adult', false))
+            ->where('contents.updated_at', '>=', now()->subDays(7))
+            ->whereColumn('contents.updated_at', '>', 'user_contents.updated_at')
+            ->orderByDesc('contents.updated_at')
+            ->select('user_contents.*')
+            ->limit(30)
+            ->get();
     }
 
     public function create(int $userId, array $data): UserContent

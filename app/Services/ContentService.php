@@ -157,37 +157,4 @@ class ContentService
 
         return $query->paginate($perPage);
     }
-
-    public function isDuplicate(string $name, ?array $alternativeNames = [], ?int $excludeId = null): bool
-    {
-        $query = Content::query();
-
-        if ($excludeId) {
-            $query->where('id', '!=', $excludeId);
-        }
-
-        if ((clone $query)->whereRaw('LOWER(TRIM(name)) = ?', [NameHelper::normalize($name)])->exists()) {
-            return true;
-        }
-
-        foreach ($alternativeNames ?? [] as $checkName) {
-            $check = NameHelper::normalize($checkName);
-            if (! $check) {
-                continue;
-            }
-
-            $altExists = (clone $query)
-                ->where(function ($q) use ($check) {
-                    $q->whereRaw('LOWER(TRIM(name)) = ?', [$check])
-                        ->orWhereRaw("JSON_SEARCH(LOWER(alternative_names), 'one', ?) IS NOT NULL", [$check]);
-                })
-                ->exists();
-
-            if ($altExists) {
-                return true;
-            }
-        }
-
-        return false;
-    }
 }

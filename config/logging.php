@@ -15,13 +15,6 @@ return [
         'trace' => env('LOG_DEPRECATIONS_TRACE', false),
     ],
 
-    // Whether to log all HTTP requests (set LOG_REQUESTS=true in .env to enable)
-    'log_requests' => env('LOG_REQUESTS', false),
-
-    // Log viewer web UI credentials (Basic Auth)
-    'viewer_user' => env('LOG_VIEWER_USER', 'admin'),
-    'viewer_password' => env('LOG_VIEWER_PASSWORD'),
-
     'channels' => [
 
         // Default stack: daily file + stderr (captured by Railway/cloud platforms)
@@ -46,16 +39,6 @@ return [
             'driver' => 'daily',
             'path' => storage_path('logs/errors.log'),
             'level' => 'error',
-            'days' => env('LOG_DAILY_DAYS', 14),
-            'formatter' => JsonFormatter::class,
-            'replace_placeholders' => true,
-        ],
-
-        // HTTP access log — written by RequestLoggerMiddleware
-        'access' => [
-            'driver' => 'daily',
-            'path' => storage_path('logs/access.log'),
-            'level' => 'info',
             'days' => env('LOG_DAILY_DAYS', 14),
             'formatter' => JsonFormatter::class,
             'replace_placeholders' => true,

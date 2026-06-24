@@ -2,8 +2,6 @@
 
 use App\Helpers\LogHelper;
 use App\Http\Middleware\AdminMiddleware;
-use App\Http\Middleware\LogViewerAuth;
-use App\Http\Middleware\RequestLoggerMiddleware;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
@@ -22,13 +20,8 @@ return Application::configure(basePath: dirname(__DIR__))
         apiPrefix: 'api',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->api(append: [
-            RequestLoggerMiddleware::class,
-        ]);
-
         $middleware->alias([
             'admin' => AdminMiddleware::class,
-            'log.viewer' => LogViewerAuth::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

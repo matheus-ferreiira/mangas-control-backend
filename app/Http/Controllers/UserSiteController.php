@@ -7,6 +7,7 @@ use App\Http\Requests\StoreUserSiteRequest;
 use App\Http\Requests\UpdateUserSiteRequest;
 use App\Http\Resources\UserSiteResource;
 use App\Models\UserSite;
+use App\Services\SupabaseStorageService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,6 +15,26 @@ use Illuminate\Http\Request;
 class UserSiteController extends Controller
 {
     use ApiResponse;
+
+    public function uploadLogo(Request $request, SupabaseStorageService $storage): JsonResponse
+    {
+        $request->validate([
+            'logo' => ['required', 'file', 'mimes:jpeg,jpg,png,webp,svg', 'max:500'],
+        ]);
+
+        try {
+            $url = $storage->upload($request->file('logo'), 'covers', 'logos');
+        } catch (\Throwable $e) {
+            LogHelper::error('Falha no upload de logo de fonte', [
+                'user_id' => auth()->id(),
+                'reason' => $e->getMessage(),
+            ]);
+
+            return $this->error('Falha ao enviar a logo. Tente novamente.', [], 422);
+        }
+
+        return $this->success(['logo_url' => $url], 'Logo enviada com sucesso');
+    }
 
     public function index(Request $request): JsonResponse
     {

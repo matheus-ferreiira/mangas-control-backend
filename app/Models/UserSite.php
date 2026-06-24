@@ -12,6 +12,8 @@ class UserSite extends Model
         'user_id',
         'name',
         'url',
+        'logo_url',
+        'type',
         'is_favorite',
     ];
 
