@@ -18,20 +18,24 @@ class ChapterCheckController extends Controller
      */
     public function syncFromClient(Request $request): JsonResponse
     {
-        $data = $request->validate([
+        $request->validate([
             'releases' => ['required', 'array', 'min:1'],
-            'releases.*.alternativeTitle' => ['required', 'string'],
-            'releases.*.chapter' => ['required', 'string'],
         ]);
 
-        // Mapa título(lower/trim) => capítulo (mantém a primeira ocorrência = mais recente)
+        // Mapa título(lower/trim) => capítulo (tolerante: ignora itens malformados;
+        // mantém a primeira ocorrência = mais recente)
         $map = [];
-        foreach ($data['releases'] as $r) {
-            $key = mb_strtolower(trim($r['alternativeTitle']));
+        foreach ((array) $request->input('releases', []) as $r) {
+            $title = is_array($r) ? ($r['alternativeTitle'] ?? null) : null;
+            $chapter = is_array($r) ? ($r['chapter'] ?? null) : null;
+            if (! is_scalar($title) || $chapter === null || $chapter === '') {
+                continue;
+            }
+            $key = mb_strtolower(trim((string) $title));
             if ($key === '' || array_key_exists($key, $map)) {
                 continue;
             }
-            $map[$key] = (string) $r['chapter'];
+            $map[$key] = (string) $chapter;
         }
 
         $items = UserContent::with('content')
