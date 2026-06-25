@@ -19,7 +19,7 @@ Schedule::call(function () {
 // O comando respeita rate limit das APIs (AniList ~90/min, TMDb).
 // Schedule::command('content:sync-updates')->daily()->withoutOverlapping();
 
-// NOTA: a verificação de novos capítulos (Chapter Tracker) é feita CLIENT-SIDE
-// (o app busca a API do site no navegador e envia via POST /user/sync-chapters),
-// porque o site bloqueia clientes HTTP server-side. O comando content:check-chapters
-// continua existindo, mas NÃO é agendado.
+// NOTA: a verificação de novos capítulos (Chapter Tracker) é feita CLIENT-SIDE,
+// via bookmarklet — o navegador do usuário busca a API do site e envia para
+// POST /user/sync-chapters. Não há comando agendado: o site bloqueia clientes
+// HTTP server-side.
