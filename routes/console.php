@@ -18,3 +18,8 @@ Schedule::call(function () {
 // DESATIVADO por padrão — descomente e ajuste a frequência conforme sua necessidade.
 // O comando respeita rate limit das APIs (AniList ~90/min, TMDb).
 // Schedule::command('content:sync-updates')->daily()->withoutOverlapping();
+
+// Verifica novos capítulos nos sites de leitura (releases API por site).
+// NOTA: requer um runner de schedule ativo (ex.: `php artisan schedule:work`
+// ou um cron do Railway chamando `php artisan schedule:run`). Sem isso, não dispara.
+Schedule::command('content:check-chapters')->dailyAt('08:00')->withoutOverlapping();

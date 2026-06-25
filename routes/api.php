@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ChapterCheckController;
 use App\Http\Controllers\ContentController;
 use App\Http\Controllers\DiscoverController;
 use App\Http\Controllers\SiteController;
@@ -22,6 +23,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::patch('/user/profile', [AuthController::class, 'updateProfile']);
+    Route::post('/user/check-chapters', [ChapterCheckController::class, 'checkChapters']);
 
     Route::get('/discover/home', [DiscoverController::class, 'home']);
 

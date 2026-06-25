@@ -47,6 +47,7 @@ class StoreUserContentRequest extends BaseFormRequest
             'current_season' => ['nullable', 'integer', 'min:1'],
             'rating' => ['nullable', 'numeric', 'min:0', 'max:10'],
             'status' => ['nullable', 'in:reading,completed,paused,dropped,plan_to_read'],
+            'site_title' => ['nullable', 'string', 'max:255'],
         ];
     }
 

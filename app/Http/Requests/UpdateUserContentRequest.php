@@ -41,6 +41,7 @@ class UpdateUserContentRequest extends BaseFormRequest
             'current_season' => ['sometimes', 'integer', 'min:1'],
             'rating' => ['nullable', 'numeric', 'min:0', 'max:10'],
             'status' => ['sometimes', 'in:reading,completed,paused,dropped,plan_to_read'],
+            'site_title' => ['sometimes', 'nullable', 'string', 'max:255'],
         ];
     }
 }

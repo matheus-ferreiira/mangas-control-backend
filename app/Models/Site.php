@@ -10,7 +10,14 @@ class Site extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'url'];
+    protected $fillable = [
+        'name',
+        'url',
+        'releases_api_url',
+        'releases_api_type',
+        'releases_title_field',
+        'releases_chapter_field',
+    ];
 
     public function userContents(): HasMany
     {
