@@ -133,10 +133,15 @@ class ChapterCheckController extends Controller
             }
         }
 
+        $totalLinked = $toonId
+            ? $items->filter(fn ($u) => (int) $u->site_id === (int) $toonId)->count()
+            : 0;
+
         return $this->success([
             'checked' => $checked,
             'updated' => $updated,
             'linked' => $linked,
+            'total_linked' => $totalLinked,
             'retitled' => $retitled,
             'new_chapters' => $newChapters,
             'unmatched' => $unmatched,
