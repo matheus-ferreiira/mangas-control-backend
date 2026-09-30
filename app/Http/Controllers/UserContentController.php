@@ -96,6 +96,12 @@ class UserContentController extends Controller
             $data['last_unit_update'] = now();
         }
 
+        // Corrigir o título do site à mão desfaz o vínculo por ID: o próximo
+        // sync de capítulos volta a procurar a obra pelo título novo.
+        if (array_key_exists('site_title', $data) && $data['site_title'] !== $userContent->site_title) {
+            $data['site_work_id'] = null;
+        }
+
         $userContent->update($data);
         $userContent->load(['content', 'site', 'userSite']);
 

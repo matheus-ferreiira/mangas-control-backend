@@ -17,6 +17,7 @@ class UserContentResource extends JsonResource
             'user_site' => new UserSiteResource($this->whenLoaded('userSite')),
             'site_title' => $this->site_title,
             'site_last_chapter' => $this->site_last_chapter,
+            'site_work_id' => $this->site_work_id,
             'current_units' => $this->current_units,
             'current_season' => $this->current_season ?? 1,
             'progress_percent' => $this->computeProgressPercent(),
