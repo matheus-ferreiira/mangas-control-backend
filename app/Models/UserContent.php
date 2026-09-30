@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\DiscoverService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -28,6 +29,15 @@ class UserContent extends Model
         'rating' => 'float',
         'last_unit_update' => 'datetime',
     ];
+
+    /** Qualquer mudança na biblioteca invalida as seções pessoais do Discover. */
+    protected static function booted(): void
+    {
+        $forget = fn (UserContent $uc) => DiscoverService::forgetUser((int) $uc->user_id);
+
+        static::saved($forget);
+        static::deleted($forget);
+    }
 
     public function user(): BelongsTo
     {

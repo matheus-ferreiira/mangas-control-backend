@@ -23,13 +23,25 @@ class DiscoverService
 
         $publicSections = Cache::remember("discover.home.public.v3.a{$a}", self::PUBLIC_CACHE_TTL, fn () => $this->loadPublicSections($showAdult));
 
-        $personalData = Cache::remember("discover.home.user.{$userId}.v3.a{$a}", self::USER_CACHE_TTL, fn () => $this->loadPersonalSections($userId, $showAdult));
+        $personalData = Cache::remember(self::userCacheKey($userId, $showAdult), self::USER_CACHE_TTL, fn () => $this->loadPersonalSections($userId, $showAdult));
 
         // Tag public catalog items with is_in_library per user
         $inLibrary = array_flip(UserContent::where('user_id', $userId)->pluck('content_id')->toArray());
         $publicTagged = $this->tagWithLibraryStatus($publicSections, $inLibrary);
 
         return array_merge($publicTagged, $personalData);
+    }
+
+    /** Descarta as seções pessoais em cache (continuar lendo, recomendações). */
+    public static function forgetUser(int $userId): void
+    {
+        Cache::forget(self::userCacheKey($userId, false));
+        Cache::forget(self::userCacheKey($userId, true));
+    }
+
+    private static function userCacheKey(int $userId, bool $showAdult): string
+    {
+        return "discover.home.user.{$userId}.v3.a".($showAdult ? 1 : 0);
     }
 
     private function tagWithLibraryStatus(array $sections, array $inLibrary): array

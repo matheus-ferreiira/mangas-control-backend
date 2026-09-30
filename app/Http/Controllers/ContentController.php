@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\ContentResource;
 use App\Models\Content;
+use App\Models\UserContent;
 use App\Services\ContentService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -33,10 +34,12 @@ class ContentController extends Controller
         $userId = auth()->id();
         $showAdult = (int) Content::adultModeFor();
         $version = Cache::get(self::CACHE_VERSION_KEY, 0);
-        $cacheKey = "api.contents.v{$version}.u{$userId}.a{$showAdult}.".md5(json_encode($filters).'_p'.$request->get('page', 1));
+        // O cache guarda só o catálogo (compartilhado entre usuários do mesmo modo +18);
+        // "está na biblioteca" é marcado depois, sempre atual.
+        $cacheKey = "api.contents.v{$version}.a{$showAdult}.".md5(json_encode($filters).'_p'.$request->get('page', 1));
 
-        $data = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($filters, $request, $userId) {
-            $result = $this->contentService->getContents($filters, $userId);
+        $data = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($filters, $request) {
+            $result = $this->contentService->getContents($filters);
 
             return [
                 'items' => collect($result->items())
@@ -53,6 +56,15 @@ class ContentController extends Controller
                 ],
             ];
         });
+
+        $inLibrary = UserContent::where('user_id', $userId)
+            ->whereIn('content_id', array_column($data['items'], 'id'))
+            ->pluck('content_id')
+            ->flip();
+        foreach ($data['items'] as &$item) {
+            $item['is_in_library'] = isset($inLibrary[$item['id']]);
+        }
+        unset($item);
 
         return $this->success($data);
     }
