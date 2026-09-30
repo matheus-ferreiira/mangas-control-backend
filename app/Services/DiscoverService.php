@@ -16,14 +16,14 @@ class DiscoverService
 
     public function getHome(int $userId): array
     {
-        // Filtro global de conteúdo adulto (perfil). Dois buckets de cache público:
-        // SFW (a0) e completo (a1) — evita explosão de cache por usuário.
-        $showAdult = (bool) (optional(\App\Models\User::find($userId))->show_adult_content ?? false);
+        // Filtro +18 do perfil (Content::scopeForAudience). Dois buckets de cache
+        // público: sem +18 (a0) e só +18 (a1) — evita explosão de cache por usuário.
+        $showAdult = Content::adultModeFor(\App\Models\User::find($userId));
         $a = $showAdult ? 1 : 0;
 
-        $publicSections = Cache::remember("discover.home.public.v2.a{$a}", self::PUBLIC_CACHE_TTL, fn () => $this->loadPublicSections($showAdult));
+        $publicSections = Cache::remember("discover.home.public.v3.a{$a}", self::PUBLIC_CACHE_TTL, fn () => $this->loadPublicSections($showAdult));
 
-        $personalData = Cache::remember("discover.home.user.{$userId}.v2.a{$a}", self::USER_CACHE_TTL, fn () => $this->loadPersonalSections($userId, $showAdult));
+        $personalData = Cache::remember("discover.home.user.{$userId}.v3.a{$a}", self::USER_CACHE_TTL, fn () => $this->loadPersonalSections($userId, $showAdult));
 
         // Tag public catalog items with is_in_library per user
         $inLibrary = array_flip(UserContent::where('user_id', $userId)->pluck('content_id')->toArray());
@@ -55,9 +55,8 @@ class DiscoverService
 
     private function loadPublicSections(bool $showAdult = false): array
     {
-        // Builder-base: aplica o filtro global de adulto a TODAS as seções da home.
-        $base = fn () => Content::query()
-            ->when(! $showAdult, fn ($q) => $q->where('is_adult', false));
+        // Builder-base: aplica o filtro +18 a TODAS as seções da home.
+        $base = fn () => Content::query()->where('is_adult', $showAdult);
 
         // Featured: random from top 8 by score to add variety
         $topEight = $base()->whereNotNull('cover')
@@ -148,7 +147,7 @@ class DiscoverService
         // Continue watching/reading
         $inProgress = UserContent::where('user_id', $userId)
             ->where('status', 'reading')
-            ->when(! $showAdult, fn ($q) => $q->whereHas('content', fn ($c) => $c->where('is_adult', false)))
+            ->whereHas('content', fn ($c) => $c->where('is_adult', $showAdult))
             ->with('content:id,name,cover,type,total_units')
             ->orderBy('updated_at', 'desc')
             ->limit(8)
@@ -178,7 +177,7 @@ class DiscoverService
         if (! empty($topGenres)) {
             $userContentIds = UserContent::where('user_id', $userId)->pluck('content_id');
             $recs = Content::whereNotNull('cover')
-                ->when(! $showAdult, fn ($q) => $q->where('is_adult', false))
+                ->where('is_adult', $showAdult)
                 ->whereNotIn('id', $userContentIds)
                 ->where(function ($q) use ($topGenres) {
                     foreach (array_slice($topGenres, 0, 3) as $genre) {

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -79,6 +80,21 @@ class Content extends Model
         'duration' => 'integer',
         'is_adult' => 'boolean',
     ];
+
+    /**
+     * Filtro +18, único e vindo só do perfil (`users.show_adult_content`):
+     * desligado (padrão) → só conteúdo não adulto; ligado → só conteúdo adulto.
+     */
+    public function scopeForAudience(Builder $query, ?User $user = null): Builder
+    {
+        return $query->where($query->qualifyColumn('is_adult'), self::adultModeFor($user));
+    }
+
+    /** Se o usuário (ou o autenticado) está no modo +18. */
+    public static function adultModeFor(?User $user = null): bool
+    {
+        return (bool) (($user ?? auth()->user())?->show_adult_content ?? false);
+    }
 
     public function userContents(): HasMany
     {

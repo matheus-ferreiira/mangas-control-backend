@@ -27,11 +27,11 @@ class ContentController extends Controller
             'type', 'origin_type', 'format', 'status', 'search', 'genres', 'year', 'year_min', 'year_max',
             'sort', 'order', 'per_page', 'recent',
             'rating_min', 'rating_max', 'votes_min',
-            'language', 'country', 'is_adult',
+            'language', 'country',
         ]);
 
         $userId = auth()->id();
-        $showAdult = (int) (bool) (optional(auth()->user())->show_adult_content ?? false);
+        $showAdult = (int) Content::adultModeFor();
         $version = Cache::get(self::CACHE_VERSION_KEY, 0);
         $cacheKey = "api.contents.v{$version}.u{$userId}.a{$showAdult}.".md5(json_encode($filters).'_p'.$request->get('page', 1));
 
@@ -63,7 +63,7 @@ class ContentController extends Controller
         $content = Content::selectRaw(
             'contents.*, EXISTS(SELECT 1 FROM user_contents WHERE content_id = contents.id AND user_id = ?) as is_in_library',
             [(int) $userId]
-        )->find($id);
+        )->forAudience()->find($id);
 
         if (! $content) {
             return $this->error('Conteúdo não encontrado', [], 404);

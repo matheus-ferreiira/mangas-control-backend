@@ -44,7 +44,9 @@ class UserContentController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $userContent = UserContent::with(['content', 'site', 'userSite'])->find($id);
+        $userContent = UserContent::with(['content', 'site', 'userSite'])
+            ->whereHas('content', fn ($q) => $q->forAudience())
+            ->find($id);
 
         if (! $userContent) {
             return $this->error('Item não encontrado', [], 404);

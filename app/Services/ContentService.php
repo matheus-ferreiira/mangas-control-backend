@@ -51,16 +51,8 @@ class ContentService
             $query->whereIn('status', (array) $filters['status']);
         }
 
-        // ── Filtro global de conteúdo adulto (perfil do usuário) ──────────────
-        // Default: esconder +18. Quando o usuário opta por ver, mostra TUDO
-        // (adulto + normal); um filtro is_adult explícito ainda pode restringir.
-        $showAdult = (bool) (optional(auth()->user())->show_adult_content ?? false);
-
-        if (! $showAdult) {
-            $query->where('is_adult', false);
-        } elseif (isset($filters['is_adult']) && $filters['is_adult'] !== '') {
-            $query->where('is_adult', filter_var($filters['is_adult'], FILTER_VALIDATE_BOOLEAN));
-        }
+        // Filtro +18 do perfil (ver Content::scopeForAudience) — vale também para a busca.
+        $query->forAudience();
 
         if (! empty($filters['language'])) {
             $query->where('original_language', $filters['language']);

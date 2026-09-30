@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Helpers\LogHelper;
+use App\Models\Content;
 use App\Models\UserContent;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -18,11 +19,8 @@ class UserContentService
         $query = UserContent::with(['content', 'site', 'userSite'])
             ->where('user_id', $userId);
 
-        // Filtro global de conteúdo adulto (perfil do usuário). Default: esconder +18.
-        $showAdult = (bool) (optional(auth()->user())->show_adult_content ?? false);
-        if (! $showAdult) {
-            $query->whereHas('content', fn ($q) => $q->where('is_adult', false));
-        }
+        // Filtro +18 do perfil (Content::scopeForAudience).
+        $query->whereHas('content', fn ($q) => $q->forAudience());
 
         if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
@@ -49,14 +47,12 @@ class UserContentService
      */
     public function getWithUpdates(int $userId): \Illuminate\Support\Collection
     {
-        $showAdult = (bool) (optional(auth()->user())->show_adult_content ?? false);
-
         return UserContent::query()
             ->with(['content', 'site', 'userSite'])
             ->join('contents', 'contents.id', '=', 'user_contents.content_id')
             ->where('user_contents.user_id', $userId)
             ->whereNotIn('user_contents.status', ['completed', 'dropped'])
-            ->when(! $showAdult, fn ($q) => $q->where('contents.is_adult', false))
+            ->where('contents.is_adult', Content::adultModeFor())
             ->where('contents.updated_at', '>=', now()->subDays(7))
             ->whereColumn('contents.updated_at', '>', 'user_contents.updated_at')
             ->orderByDesc('contents.updated_at')
