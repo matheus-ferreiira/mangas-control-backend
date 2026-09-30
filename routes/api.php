@@ -24,6 +24,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::patch('/user/profile', [AuthController::class, 'updateProfile']);
     Route::post('/user/sync-chapters', [ChapterCheckController::class, 'syncFromClient']);
+    Route::get('/user/sync-chapters/last-import', [ChapterCheckController::class, 'lastImport']);
 
     Route::get('/discover/home', [DiscoverController::class, 'home']);
 

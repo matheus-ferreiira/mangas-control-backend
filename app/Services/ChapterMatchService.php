@@ -161,6 +161,27 @@ class ChapterMatchService
         return mb_strtolower((string) $s);
     }
 
+    /**
+     * Chaves de comparação exata de um título: normalizado e sem artigo inicial.
+     *
+     * @return array<int, string>
+     */
+    public function titleKeys(string $title): array
+    {
+        $key = $this->normalize($title);
+
+        return array_values(array_unique(array_filter(
+            [$key, $this->stripArticle($key)],
+            fn ($k) => mb_strlen($k) >= 3
+        )));
+    }
+
+    /** Similaridade (0..1) entre dois títulos — mesma métrica da camada 3. */
+    public function titleSimilarity(string $a, string $b): float
+    {
+        return $this->similarity($this->prepare($a), $this->prepare($b));
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
 
     /**

@@ -543,6 +543,61 @@ sync procura de novo pelo título novo.
 - `ambiguous` traz `{ title, candidates[] }`: itens com mais de um candidato
   parecido, que não foram vinculados.
 
+### Histórico de leitura (`reading`)
+
+Desde 2026-09-30 o bookmarklet também envia o que o usuário leu no ToonLivre,
+para levar à biblioteca obras lidas só lá. Antes do feed de lançamentos ele
+chama, com a sessão do site:
+
+1. `GET /api/auth/me` → `history[]` (`mangaId`, `chapterNumber`, `timestamp`,
+   do mais recente para o mais antigo) e as listas `completed`/`paused`/`dropped`.
+2. `POST /api/mangas/by-ids?lite=1` com `{ "ids": [...] }` (lotes de 100, header
+   `x-csrf-token` lido do cookie `csrf_token`, como o front do site faz) → mesmo
+   formato de item do feed, com todos os capítulos em `recentChapters`.
+
+E manda, junto com `releases`:
+
+```json
+{ "reading": [
+  { "id": "obra-f71d1b34", "title": "Os Planos do Mercenário Regressado",
+    "alternativeTitle": "The Regressed Mercenary's Machinations", "releaseYear": "2024",
+    "type": "Manhwa", "status": "Ongoing", "cover": "https://cdn.toonlivre.net/covers/...webp",
+    "lastRead": "99", "available": "108", "readAt": 1790785549793, "listStatus": null }
+] }
+```
+
+Cada obra do histórico também entra como lançamento (`available` como
+`chapter`), passando pelo vínculo acima. Depois disso,
+[ToonLivreLibraryService](../app/Services/ToonLivreLibraryService.php) trata três casos:
+
+| Caso | Quando | O que faz | Quando roda |
+|---|---|---|---|
+| 0 | já está na biblioteca (vinculada por `site_work_id`) | `current_units` = `lastRead` se for maior (nunca regride); `plan_to_read` vira `reading` | na requisição |
+| A | não está na biblioteca, mas está em `contents` | cria o `user_content` com status `reading` (ou o da lista do site), progresso, `site_*`; adiciona os títulos PT/EN em `alternative_names` | na requisição |
+| B | não está em `contents` | busca na AniList (`searchManga`, EN e depois PT, país pela origem) e importa com `normalizeAniListItem`; sem resultado, cria a obra com os dados do ToonLivre (`source = toonlivre`, `external_id` = ID da obra); depois igual ao caso A | **depois da resposta** (`defer`) |
+
+Catálogo (caso A): título exato (normalizado, com e sem artigo) contra `name` e
+`alternative_names`, mesma origem (manhwa/manhua/manga), ano a até 2 anos,
+`format` diferente de novel. Com vários candidatos, fica o de ano mais próximo
+e, empatando, o mais popular.
+
+AniList (caso B), aceita em ordem:
+1. título exato em qualquer nome da AniList (inglês, romaji, nativo, sinônimos),
+   com ano a até 2 anos;
+2. título com semelhança ≥ 0,90 e ano a até 1 ano;
+3. o **único** resultado da busca com o mesmo ano e semelhança ≥ 0,25 (tradução
+   diferente: "…Mercenary's Machinations" × "The Regressed Mercenary Has a Plan").
+
+Se a AniList falhar (rede, 429 repetido), nada é criado: a obra volta no próximo
+sync. O caso B roda com php-fpm depois da resposta, sem fila e sem worker, com
+lock por usuário e pausa de 700 ms entre buscas. O resultado fica 7 dias em
+cache: `GET /api/user/sync-chapters/last-import` e `last_import` na resposta do
+sync seguinte.
+
+Campos novos na resposta: `progressed` (itens com progresso avançado), `added`
+(caso A), `importing` (caso B, títulos) e `last_import`. `new_chapters` agora
+compara com o progresso já atualizado pelo histórico.
+
 ### Como inspecionar um clique
 
 - **Ao vivo:** abra o DevTools (F12) → Network em `toonlivre.net` *antes* de

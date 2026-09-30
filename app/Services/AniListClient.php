@@ -149,6 +149,33 @@ class AniListClient
     }
 
     /**
+     * Busca mangás por título (busca textual da AniList, ordenada por relevância).
+     * Não filtra +18: a obra precisa ser encontrada mesmo se for adulta.
+     *
+     * @param  string|null  $countryOfOrigin  "KR" / "CN" / "JP"
+     * @return array<int, array>  data.Page.media[]
+     */
+    public function searchManga(string $search, ?string $countryOfOrigin = null, int $perPage = 10): array
+    {
+        $countryFilter = $countryOfOrigin ? ', countryOfOrigin: "'.$countryOfOrigin.'"' : '';
+
+        $fields = self::MEDIA_FIELDS;
+        $query = <<<GQL
+        query (\$search: String, \$perPage: Int) {
+            Page(page: 1, perPage: \$perPage) {
+                media(search: \$search, type: MANGA, sort: SEARCH_MATCH{$countryFilter}) {
+                    {$fields}
+                }
+            }
+        }
+        GQL;
+
+        $data = $this->query($query, ['search' => $search, 'perPage' => $perPage]);
+
+        return $data['Page']['media'] ?? [];
+    }
+
+    /**
      * Busca um único item pelo MAL ID — usado no de-para e no fallback Jikan.
      *
      * @param  string  $type  'ANIME' ou 'MANGA'
