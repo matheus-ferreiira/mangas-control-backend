@@ -24,6 +24,9 @@ class AniListContentService
     // Campos que --force nunca sobrescreve (identidade do registro)
     private const FORCE_SKIP = ['name', 'alternative_names', 'type', 'source', 'external_id', 'anilist_id', 'mal_id'];
 
+    /** Tags que tiram uma obra +18 do catálogo (decisão do dono, 2026-09-30). */
+    public const EXCLUDED_ADULT_TAGS = ["Boys' Love"];
+
     public function __construct(private AniListClient $client) {}
 
     /**
@@ -58,34 +61,137 @@ class AniListContentService
                 break;
             }
 
-            foreach ($media as $item) {
-                $name = trim($item['title']['english'] ?? $item['title']['romaji'] ?? '');
-                if (! $name) {
-                    continue;
-                }
-
-                try {
-                    $data = $this->normalizeAniListItem($item, $contentType);
-
-                    // Fallback Jikan (best-effort): só para anime e quando há MAL ID.
-                    if ($enrich && $contentType === 'anime' && ! empty($data['mal_id'])) {
-                        $this->enrichFromJikan($data, (int) $data['mal_id']);
-                    }
-
-                    $imported += $this->upsert($data, $force, $log);
-                } catch (\Throwable $e) {
-                    $log("[ERRO ITEM][{$contentType}] {$name}: ".$e->getMessage());
-                    Log::warning('AniList import item error', [
-                        'type' => $contentType,
-                        'name' => $name,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-            }
+            $imported += $this->importItems($media, $contentType, $force, $enrich, $log);
 
             // Rate limit AniList: < 90/min (e tolera o modo degradado de 30/min).
             if ($page < $pages) {
                 usleep(700_000);
+            }
+        }
+
+        return $imported;
+    }
+
+    /**
+     * Importa TUDO do filtro, fatiando por data de início (ano; ano com mais de
+     * 5.000 obras vira meses) para contornar o teto de 5.000 resultados por
+     * consulta da AniList. Obras sem data de início não entram nas fatias.
+     * Sem --force, as já existentes são puladas, então rodar de novo retoma.
+     */
+    public function importByDate(
+        callable $log,
+        string $aniListType,
+        string $contentType,
+        int $fromYear,
+        int $toYear,
+        bool $force = false,
+        bool $includeAdult = false,
+        bool $enrich = true,
+        ?string $countryOfOrigin = null,
+        ?string $format = null
+    ): int {
+        $imported = 0;
+        $fetch = fn (int $page, int $g, int $l) => $this->client->fetchDateSlice($aniListType, $page, $g, $l, $includeAdult, $countryOfOrigin, $format);
+
+        // Do mais recente para o mais antigo: as obras novas entram primeiro.
+        for ($year = $toYear; $year >= $fromYear; $year--) {
+            // YYYY0000 (só ano) até YYYY1231; limites exclusivos.
+            $g = $year * 10000 - 1;
+            $l = ($year + 1) * 10000;
+
+            try {
+                // Mais de 100 páginas (5.000) no ano → fatia por mês (0 = só ano conhecido).
+                $overflow = $fetch(100, $g, $l)['hasNextPage'];
+                usleep(700_000);
+            } catch (\Throwable $e) {
+                $log("[AVISO] AniList {$year}: ".$e->getMessage());
+
+                continue;
+            }
+
+            $slices = $overflow
+                ? array_map(fn ($m) => [$year, $m, $year * 10000 + $m * 100 - 1, $year * 10000 + ($m + 1) * 100], range(12, 0))
+                : [[$year, null, $g, $l]];
+
+            foreach ($slices as [$y, $m, $sg, $sl]) {
+                $label = $m === null ? (string) $y : sprintf('%d-%02d', $y, $m);
+                $sliceCount = 0;
+
+                for ($page = 1; $page <= 100; $page++) {
+                    try {
+                        $result = $fetch($page, $sg, $sl);
+                    } catch (\Throwable $e) {
+                        $log("[AVISO] AniList {$label} página {$page}: ".$e->getMessage());
+                        break;
+                    }
+
+                    $sliceCount += count($result['media']);
+                    $imported += $this->importItems($result['media'], $contentType, $force, $enrich, $log);
+                    usleep(700_000);
+
+                    if (! $result['hasNextPage']) {
+                        break;
+                    }
+                }
+
+                $log("[FATIA] {$label}: {$sliceCount} obra(s) na AniList | total inserido/atualizado até agora: {$imported}");
+            }
+        }
+
+        return $imported;
+    }
+
+    /** Conteúdo +18 com alguma tag de EXCLUDED_ADULT_TAGS não entra no catálogo. */
+    private function isExcluded(array $item): bool
+    {
+        if (! ($item['isAdult'] ?? false)) {
+            return false;
+        }
+
+        $tags = array_merge(
+            array_column($item['tags'] ?? [], 'name'),
+            $item['genres'] ?? []
+        );
+
+        return (bool) array_intersect($tags, self::EXCLUDED_ADULT_TAGS);
+    }
+
+    /** Normaliza e grava os itens de uma página da AniList. */
+    private function importItems(array $media, string $contentType, bool $force, bool $enrich, callable $log): int
+    {
+        $imported = 0;
+
+        foreach ($media as $item) {
+            $name = trim($item['title']['english'] ?? $item['title']['romaji'] ?? '');
+            if (! $name) {
+                continue;
+            }
+
+            if ($this->isExcluded($item)) {
+                continue;
+            }
+
+            try {
+                $data = $this->normalizeAniListItem($item, $contentType);
+
+                // Fallback Jikan (best-effort): só para anime e quando há MAL ID.
+                if ($enrich && $contentType === 'anime' && ! empty($data['mal_id'])) {
+                    $this->enrichFromJikan($data, (int) $data['mal_id']);
+                }
+
+                // contents.status é enum NOT NULL sem 'upcoming' (e sem null).
+                if (! in_array($data['status'] ?? null, ['ongoing', 'completed', 'hiatus', 'cancelled'], true)) {
+                    $data['status'] = 'ongoing';
+                }
+
+                $imported += $this->upsert($data, $force, $log);
+            } catch (\Throwable $e) {
+                $log("[ERRO ITEM][{$contentType}] {$name}: ".$e->getMessage());
+                Log::warning('AniList import item error', [
+                    'type' => $contentType,
+                    'name' => $name,
+                    'error' => $e->getMessage(),
+                ]);
             }
         }
 
@@ -305,9 +411,11 @@ class AniListContentService
             }
         }
 
-        // 3ª: nome normalizado + type
+        // 3ª: nome normalizado + type — só contra registro sem anilist_id (ou o mesmo).
+        // Obras homônimas com anilist_id diferente são obras diferentes (ex.: Monster JP × Monster KR).
         return Content::whereRaw('LOWER(TRIM(name)) = ?', [NameHelper::normalize($data['name'] ?? '')])
             ->where('type', $data['type'])
+            ->when(! empty($data['anilist_id']), fn ($q) => $q->where(fn ($w) => $w->whereNull('anilist_id')->orWhere('anilist_id', $data['anilist_id'])))
             ->first();
     }
 

@@ -143,6 +143,10 @@ class ContentService
             }
         }
 
+        // Desempate estável: sem ele, itens com o mesmo valor (popularidade, score
+        // nulo na busca) mudam de ordem entre páginas e aparecem repetidos no scroll.
+        $query->orderBy('contents.id', 'desc');
+
         // ── Paginação ─────────────────────────────────────────────────────────
 
         $perPage = max(1, min((int) ($filters['per_page'] ?? 20), self::MAX_PER_PAGE));

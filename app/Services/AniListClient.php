@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use Illuminate\Http\Client\RequestException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -13,6 +15,9 @@ use RuntimeException;
 class AniListClient
 {
     private const ENDPOINT = 'https://graphql.anilist.co';
+
+    /** Esperas máximas por 429 numa mesma query (cada uma respeita o Retry-After). */
+    private const MAX_429_WAITS = 5;
 
     /**
      * Campos pedidos para cada Media. Reutilizados em Page e em buscas unitárias.
@@ -55,29 +60,16 @@ class AniListClient
      */
     public function query(string $graphql, array $variables = []): array
     {
-        $response = Http::timeout(15)
-            ->retry(3, 500)
-            ->acceptJson()
-            ->asJson()
-            ->post(self::ENDPOINT, [
-                'query' => $graphql,
-                'variables' => $variables,
-            ]);
+        $response = $this->send($graphql, $variables);
 
-        // Tratamento explícito de 429 (rate limit): respeita Retry-After e tenta 1x mais.
-        if ($response->status() === 429) {
+        // 429 (rate limit): espera o Retry-After e tenta de novo, até MAX_429_WAITS vezes.
+        // O retry() do send não repete 429, senão lançaria exceção antes daqui.
+        for ($i = 0; $response->status() === 429 && $i < self::MAX_429_WAITS; $i++) {
             $wait = (int) ($response->header('Retry-After') ?: 60);
-            Log::warning('AniList 429 rate limit', ['retry_after' => $wait]);
-            sleep($wait > 0 ? $wait : 60);
+            Log::warning('AniList 429 rate limit', ['retry_after' => $wait, 'attempt' => $i + 1]);
+            sleep(max(1, $wait) + 1);
 
-            $response = Http::timeout(15)
-                ->retry(3, 500)
-                ->acceptJson()
-                ->asJson()
-                ->post(self::ENDPOINT, [
-                    'query' => $graphql,
-                    'variables' => $variables,
-                ]);
+            $response = $this->send($graphql, $variables);
         }
 
         if (! $response->successful()) {
@@ -91,6 +83,52 @@ class AniListClient
         }
 
         return $response->json('data', []);
+    }
+
+    /** POST com retry para falhas transitórias, exceto 429 (tratado em query()). */
+    private function send(string $graphql, array $variables): Response
+    {
+        return Http::timeout(15)
+            ->retry(3, 500, fn ($e) => ! ($e instanceof RequestException && $e->response->status() === 429), throw: false)
+            ->acceptJson()
+            ->asJson()
+            ->post(self::ENDPOINT, [
+                'query' => $graphql,
+                'variables' => $variables,
+            ]);
+    }
+
+    /**
+     * Uma página (50 itens, ordem por ID) de obras com início entre as datas,
+     * exclusivas, no formato FuzzyDateInt (YYYYMMDD; só ano = YYYY0000).
+     * Contorna o teto de 5.000 resultados por consulta fatiando por data.
+     *
+     * @return array{media: array<int, array>, hasNextPage: bool}
+     */
+    public function fetchDateSlice(string $type, int $page, int $startGreater, int $startLesser, bool $includeAdult = false, ?string $countryOfOrigin = null, ?string $format = null): array
+    {
+        $adultFilter = $includeAdult ? ', isAdult: true' : ', isAdult: false';
+        $countryFilter = $countryOfOrigin ? ', countryOfOrigin: "'.$countryOfOrigin.'"' : '';
+        $formatFilter = $format ? ', format: '.$format : '';
+
+        $fields = self::MEDIA_FIELDS;
+        $query = <<<GQL
+        query (\$page: Int, \$type: MediaType, \$g: FuzzyDateInt, \$l: FuzzyDateInt) {
+            Page(page: \$page, perPage: 50) {
+                pageInfo { hasNextPage }
+                media(type: \$type, sort: ID, startDate_greater: \$g, startDate_lesser: \$l{$adultFilter}{$countryFilter}{$formatFilter}) {
+                    {$fields}
+                }
+            }
+        }
+        GQL;
+
+        $data = $this->query($query, ['page' => $page, 'type' => $type, 'g' => $startGreater, 'l' => $startLesser]);
+
+        return [
+            'media' => $data['Page']['media'] ?? [],
+            'hasNextPage' => (bool) ($data['Page']['pageInfo']['hasNextPage'] ?? false),
+        ];
     }
 
     /**

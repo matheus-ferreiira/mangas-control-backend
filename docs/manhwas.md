@@ -51,6 +51,21 @@ php artisan content:import --type=manga --origin=manhwa --format=MANGA --pages=1
 | `--pages=N` | páginas 1..N, 50 itens cada | Ordem sempre `POPULARITY_DESC`. Padrão `1`. |
 | `--force` | — | Atualiza os registros existentes (ver seção 5). Sem ela, existentes são pulados. |
 | `--details` | — | Só TMDb; ignorada para mangá. |
+| `--by-date` | fatias `startDate_greater/lesser`, `sort: ID` | Importa **tudo** do filtro, ano a ano (`--from-year`, padrão 1950; `--to-year`, padrão ano que vem). Ano com mais de 5.000 obras é fatiado por mês. Ignora `--pages`. Obras sem data de início não entram. |
+
+Importar **todos** os manhwas +18 (sem o teto de 5.000; sem `--force`, as
+existentes são puladas, então rodar de novo retoma):
+
+```bash
+php artisan content:import --type=manga --origin=manhwa --adult --by-date
+```
+
+> Obras +18 com a tag `Boys' Love` são puladas no import
+> (`AniListContentService::EXCLUDED_ADULT_TAGS`); as que existiam foram
+> apagadas em 2026-09-30 (1.454).
+
+> O `pageInfo.total` da AniList vem sempre `5000` com filtros (inclusive por
+> data), então não serve para contar; só `hasNextPage` é confiável.
 
 Atualização completa dos manhwas (as duas metades):
 
@@ -60,8 +75,7 @@ php artisan content:import --type=manga --origin=manhwa --pages=100 --force --ad
 ```
 
 > ⚠️ Com o `.env` apontando para produção, esses comandos gravam direto no
-> banco de produção. E **não rode com `--force` antes de corrigir a colisão
-> por nome** (seção 5): hoje ela sobrescreveria 6 obras com dados de outras.
+> banco de produção. A colisão por nome (seção 5) foi corrigida em 2026-09-30.
 
 ### Limites da AniList
 
@@ -76,10 +90,10 @@ php artisan content:import --type=manga --origin=manhwa --pages=100 --force --ad
   (modo degradado; o normal é 90/min). O import espera só 700 ms entre
   páginas (calibrado para 90/min), então com 30/min ele fica no limite e pode
   tomar 429. Os retries do `Http::retry(3, 500)` também contam no limite.
-- **429 não é tratado de verdade.** O cliente usa `Http::retry(3, 500)`, que
-  lança exceção depois da 3ª resposta 429. O bloco que lê `Retry-After` e
-  espera nunca é alcançado. O `importMedia` captura a exceção, loga
-  `[AVISO] AniList página N: ...` e **interrompe o import** naquela página.
+- **429.** Desde 2026-09-30 o `retry` do cliente não repete 429; o
+  `AniListClient::query` espera o `Retry-After` (ou 60 s) e tenta de novo, até
+  5 vezes por query, e o import continua. Antes, o 3º 429 lançava exceção e o
+  import parava na página.
 
 ## 3. A requisição à AniList
 
@@ -220,9 +234,9 @@ manhwas:
 > `origin_type`, `country`, capa, sinopse e capítulos, mantendo o `anilist_id`
 > japonês. Com `--adult`, o mesmo aconteceria com 4 manhuas: Glory Days
 > (`#11173`), Caught in the Act (`#7827`), Mimi (`#9603`) e My Way
-> (`#10562`). Os manhwas em si nunca seriam inseridos. Corrigir `findExisting`
-> antes de rodar com `--force`: não aceitar o match por nome quando os dois
-> lados têm `anilist_id` diferentes.
+> (`#10562`). Os manhwas em si nunca seriam inseridos. **Corrigido em
+> 2026-09-30:** `findExisting` só aceita o match por nome contra registro sem
+> `anilist_id` ou com o mesmo `anilist_id`.
 
 ### `content:sync-updates` (incremental)
 

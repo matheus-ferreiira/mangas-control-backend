@@ -20,7 +20,10 @@ class ImportContentsCommand extends Command
                             {--details   : (TMDb apenas) busca detalhes por item (duration, trailer, status real)}
                             {--adult     : Inclui conteúdo adulto (AniList sem filtro isAdult; TMDb include_adult). Off por padrão}
                             {--origin=   : (manga) origem via countryOfOrigin: manga=JP, manhwa=KR, manhua=CN}
-                            {--format=   : (manga) MediaFormat AniList: MANGA, NOVEL, ONE_SHOT (NOVEL salva type=novel)}';
+                            {--format=   : (manga) MediaFormat AniList: MANGA, NOVEL, ONE_SHOT (NOVEL salva type=novel)}
+                            {--by-date   : (anime/manga) importa TUDO fatiando por ano de início, sem o teto de 5.000; ignora --pages}
+                            {--from-year=1950 : (--by-date) primeiro ano}
+                            {--to-year=  : (--by-date) último ano (padrão: ano que vem)}';
 
     protected $description = 'Importa conteúdos de APIs externas (AniList p/ anime/mangá, TMDb p/ filmes/séries)';
 
@@ -72,15 +75,33 @@ class ImportContentsCommand extends Command
             $this->warn('Modo --adult ativo: conteúdo adulto será incluído.');
         }
 
-        $log = fn (string $message) => $this->line($message);
+        $byDate = (bool) $this->option('by-date');
+        $fromYear = (int) $this->option('from-year');
+        $toYear = (int) ($this->option('to-year') ?: now()->year + 1);
+
+        if ($byDate && ! in_array($type, ['anime', 'manga'], true)) {
+            $this->error('--by-date exige --type=anime ou --type=manga.');
+
+            return Command::FAILURE;
+        }
+
+        $log = fn (string $message) => $this->line('['.now()->format('H:i:s').'] '.$message);
         $types = $type ? [$type] : ['anime', 'manga', 'movie', 'tv'];
         $total = 0;
 
         foreach ($types as $t) {
             $this->info('');
-            $this->info("=== Importando {$t} [{$pages} pág] ===");
+            $this->info($byDate ? "=== Importando {$t} [por data {$fromYear}-{$toYear}] ===" : "=== Importando {$t} [{$pages} pág] ===");
 
-            $imported = match ($t) {
+            $imported = $byDate ? match ($t) {
+                'anime' => $aniList->importByDate($log, 'ANIME', 'anime', $fromYear, $toYear, $force, $adult),
+                'manga' => $aniList->importByDate(
+                    $log, 'MANGA',
+                    $format === 'NOVEL' ? 'novel' : 'manga',
+                    $fromYear, $toYear, $force, $adult, true,
+                    $originCountry, $format
+                ),
+            } : match ($t) {
                 'anime' => $aniList->importMedia($log, 'ANIME', 'anime', $pages, $force, $adult),
                 'manga' => $aniList->importMedia(
                     $log, 'MANGA',
