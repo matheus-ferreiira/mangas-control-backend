@@ -26,6 +26,15 @@ class SitesSeeder extends Seeder
                 'releases_title_field' => 'alternativeTitle',
                 'releases_chapter_field' => 'recentChapters.0.number',
             ],
+            [
+                // WordPress (tema Madara), sem API: o bookmarklet lê o HTML da listagem.
+                'name' => 'TiaManhwa',
+                'url' => 'https://tiamanhwa.com',
+                'releases_api_url' => 'https://tiamanhwa.com/manhwa/?m_orderby=latest',
+                'releases_api_type' => 'html',
+                'releases_title_field' => null,
+                'releases_chapter_field' => null,
+            ],
         ];
 
         foreach ($sites as $site) {

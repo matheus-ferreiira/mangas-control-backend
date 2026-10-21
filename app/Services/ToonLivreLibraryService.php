@@ -10,18 +10,22 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Leva para a biblioteca as obras do histórico de leitura do ToonLivre
- * (`reading`, enviado pelo bookmarklet a partir de /api/auth/me + by-ids).
+ * Leva para a biblioteca as obras do histórico de leitura de um site (`reading`,
+ * enviado pelo bookmarklet). No ToonLivre vem de /api/auth/me + by-ids; no
+ * TiaManhwa, do histórico e dos favoritos da conta (HTML do Madara).
  *
  * Para cada obra, em ordem:
  *  0. já está na biblioteca (vinculada por ID) → só avança o progresso;
  *  A. está no catálogo (`contents`) → adiciona à biblioteca (síncrono, só banco);
  *  B. não está no catálogo → importa da AniList por título ou, se a AniList não
- *     tiver a obra, cria com os dados do próprio ToonLivre. Faz chamadas HTTP,
- *     por isso roda depois da resposta (ver ChapterCheckController).
+ *     tiver a obra, cria com os dados do próprio site. Faz chamadas HTTP, por
+ *     isso roda depois da resposta (ver ChapterCheckController).
  *
- * Em A e B os títulos PT/EN do ToonLivre entram em `alternative_names`, o que
- * também ajuda o ChapterMatchService nos próximos syncs.
+ * Em A e B os títulos do site entram em `alternative_names`, o que também ajuda
+ * o ChapterMatchService nos próximos syncs.
+ *
+ * `$site` nos métodos é o site resolvido pelo controller:
+ * `{key: 'toonlivre'|'tiamanhwa', id: ?int, adult: bool}` (ver config/content.php).
  */
 class ToonLivreLibraryService
 {
@@ -40,6 +44,9 @@ class ToonLivreLibraryService
     /** Pausa entre buscas na AniList (limite de 30-90 req/min). */
     private const ANILIST_PAUSE_US = 700_000;
 
+    /** Máximo de títulos buscados na AniList por obra (cada busca custa uma pausa). */
+    private const ANILIST_MAX_TERMS = 4;
+
     private const LIST_STATUSES = ['reading', 'completed', 'paused', 'dropped', 'plan_to_read'];
 
     private const CONTENT_STATUSES = ['ongoing', 'completed', 'hiatus', 'cancelled'];
@@ -54,7 +61,7 @@ class ToonLivreLibraryService
      * Converte o `reading` do payload. Tolerante ao formato: itens sem ID, sem
      * título ou de novel são ignorados; mantém a primeira ocorrência de cada ID.
      *
-     * @return array<int, array{id: string, alt: ?string, title: ?string, year: ?int, origin: string,
+     * @return array<int, array{id: string, alt: ?string, title: ?string, alts: array<int, string>, year: ?int, origin: string,
      *   status: ?string, cover: ?string, last_read: ?string, available: ?string, read_at: ?int, list_status: ?string}>
      */
     public function parseReading(array $input): array
@@ -86,10 +93,13 @@ class ToonLivreLibraryService
                 'id' => $id,
                 'alt' => $alt,
                 'title' => $title,
+                'alts' => $this->matcher->stringList($r['alternativeTitles'] ?? null),
                 'year' => is_numeric($year) ? (int) $year : null,
+                // ToonLivre: Manhwa/Manhua/Webtoon/Manga. TiaManhwa: Pornhwa/Manhwa/
+                // Manhua/Mangá/Hentai/Doujinshi.
                 'origin' => match (true) {
                     str_contains($type, 'manhua') => 'manhua',
-                    $type === 'manga' => 'manga',
+                    (bool) preg_match('/mang|hentai|doujin/', $type) => 'manga',
                     default => 'manhwa',
                 },
                 'status' => $this->str($r['status'] ?? null),
@@ -105,8 +115,9 @@ class ToonLivreLibraryService
     }
 
     /**
-     * Avança `current_units` até o último capítulo lido no ToonLivre (nunca
-     * regride) e tira de "quero ler" o que já está sendo lido. Não salva.
+     * Avança `current_units` até o último capítulo lido no site (nunca regride)
+     * e tira de "quero ler" o que já está sendo lido. Obra só favoritada (sem
+     * capítulo lido) não muda de status. Não salva.
      *
      * @return bool  se o progresso mudou
      */
@@ -121,7 +132,7 @@ class ToonLivreLibraryService
             $changed = true;
         }
 
-        if ($uc->status === 'plan_to_read') {
+        if ($uc->status === 'plan_to_read' && $work['last_read'] !== null) {
             $uc->status = 'reading';
             $changed = true;
         }
@@ -130,9 +141,9 @@ class ToonLivreLibraryService
     }
 
     /**
-     * Caso A: procura a obra no catálogo pelo título EN/PT exato, respeitando
-     * a origem (manhwa/manhua/manga) e o ano. Vários candidatos: o de ano mais
-     * próximo e, empatando, o mais popular.
+     * Caso A: procura a obra no catálogo por qualquer título do site (EN, PT e
+     * outros nomes) exato, respeitando a origem (manhwa/manhua/manga) e o ano.
+     * Vários candidatos: o de ano mais próximo e, empatando, o mais popular.
      */
     public function findInCatalog(array $work): ?Content
     {
@@ -182,9 +193,10 @@ class ToonLivreLibraryService
 
     /**
      * Adiciona (ou vincula, se já existir) a obra à biblioteca com o progresso
-     * e os dados de fonte do ToonLivre.
+     * e os dados de fonte do site. Item já vinculado a outro site só recebe o
+     * progresso: a fonte dele não muda.
      */
-    public function addToLibrary(int $userId, Content $content, array $work, ?int $toonId): UserContent
+    public function addToLibrary(int $userId, Content $content, array $work, ?int $siteId): UserContent
     {
         $this->mergeNames($content, $work);
 
@@ -196,10 +208,16 @@ class ToonLivreLibraryService
             $uc->last_unit_update = $this->readAt($work);
         } else {
             $this->applyProgress($uc, $work);
+
+            if ($uc->site_id !== null && (int) $uc->site_id !== (int) $siteId) {
+                $uc->save();
+
+                return $uc;
+            }
         }
 
-        if ($toonId) {
-            $uc->site_id = $toonId;
+        if ($siteId) {
+            $uc->site_id = $siteId;
         }
         $uc->site_title = $work['alt'] ?? $work['title'];
         $uc->site_work_id = $work['id'];
@@ -213,13 +231,13 @@ class ToonLivreLibraryService
 
     /**
      * Caso B, para obras que não estão no catálogo: AniList e, sem resultado,
-     * dados do ToonLivre. Falha de rede/rate limit na AniList não cria nada —
-     * a obra fica para o próximo sync (evita criar duplicata de algo que existe
-     * na AniList).
+     * dados do site. Falha de rede/rate limit na AniList não cria nada — a obra
+     * fica para o próximo sync (evita criar duplicata de algo que existe na
+     * AniList).
      *
      * @return array<int, array{title: string, via: string, content_id?: int, error?: string}>
      */
-    public function importMissing(int $userId, array $works, ?int $toonId): array
+    public function importMissing(int $userId, array $works, array $site): array
     {
         $results = [];
 
@@ -240,19 +258,20 @@ class ToonLivreLibraryService
                     $via = 'anilist';
                 }
                 if (! $content) {
-                    $content = $this->createFromToonLivre($work);
-                    $via = 'toonlivre';
+                    $content = $this->createFromSite($work, $site);
+                    $via = $site['key'];
                 }
 
-                $this->addToLibrary($userId, $content, $work, $toonId);
+                $this->addToLibrary($userId, $content, $work, $site['id']);
                 $results[] = ['title' => $label, 'via' => $via, 'content_id' => $content->id];
             } catch (\Throwable $e) {
-                Log::warning('ToonLivre import falhou', ['work' => $work['id'], 'error' => $e->getMessage()]);
+                Log::warning('Import do histórico falhou', ['site' => $site['key'], 'work' => $work['id'], 'error' => $e->getMessage()]);
                 $results[] = ['title' => $label, 'via' => 'failed', 'error' => $e->getMessage()];
             }
         }
 
-        LogHelper::info('Importação ToonLivre concluída', [
+        LogHelper::info('Importação do histórico concluída', [
+            'site' => $site['key'],
             'user_id' => $userId,
             'total' => count($results),
             'via' => array_count_values(array_column($results, 'via')),
@@ -262,9 +281,10 @@ class ToonLivreLibraryService
     }
 
     /**
-     * Busca na AniList pelo título EN e depois PT. Aceita título exato (em
-     * qualquer nome da AniList) com ano próximo, ou título muito parecido com
-     * ano quase igual. Reaproveita o registro se o anilist_id já existir.
+     * Busca na AniList pelo título EN, pelos outros nomes do site e por último
+     * pelo PT. Aceita título exato (em qualquer nome da AniList) com ano
+     * próximo, ou título muito parecido com ano quase igual. Reaproveita o
+     * registro se o anilist_id já existir.
      *
      * @throws \RuntimeException  erro de transporte/GraphQL da AniList
      */
@@ -276,7 +296,11 @@ class ToonLivreLibraryService
             default => 'KR',
         };
 
-        $terms = array_values(array_unique(array_filter([$work['alt'], $work['title']])));
+        $terms = array_slice(
+            array_values(array_unique(array_filter(array_merge([$work['alt']], $work['alts'], [$work['title']])))),
+            0,
+            self::ANILIST_MAX_TERMS
+        );
 
         foreach ($terms as $n => $term) {
             if ($n > 0) {
@@ -299,7 +323,7 @@ class ToonLivreLibraryService
             $data = $this->aniListContent->normalizeAniListItem($media, 'manga');
             $data['alternative_names'] = NameHelper::normalizeList(array_merge(
                 $data['alternative_names'] ?? [],
-                array_filter([$work['alt'], $work['title']])
+                $this->workNames($work)
             ));
             $data['cover'] ??= $work['cover'];
             $data['release_year'] ??= $work['year'];
@@ -308,7 +332,7 @@ class ToonLivreLibraryService
             }
 
             $content = Content::create($data);
-            LogHelper::info('Obra importada da AniList via ToonLivre', ['content_id' => $content->id, 'anilist_id' => $media['id']]);
+            LogHelper::info('Obra importada da AniList via histórico do site', ['content_id' => $content->id, 'anilist_id' => $media['id']]);
 
             return $content;
         }
@@ -316,10 +340,10 @@ class ToonLivreLibraryService
         return null;
     }
 
-    /** Obra que não existe na AniList: cadastro mínimo com os dados do ToonLivre. */
-    public function createFromToonLivre(array $work): Content
+    /** Obra que não existe na AniList: cadastro mínimo com os dados do site. */
+    public function createFromSite(array $work, array $site): Content
     {
-        $existing = Content::where('source', 'toonlivre')->where('external_id', $work['id'])->first();
+        $existing = Content::where('source', $site['key'])->where('external_id', $work['id'])->first();
         if ($existing) {
             return $existing;
         }
@@ -331,14 +355,14 @@ class ToonLivreLibraryService
         };
 
         $content = Content::create([
-            'source' => 'toonlivre',
+            'source' => $site['key'],
             'external_id' => $work['id'],
             'name' => $work['alt'] ?? $work['title'],
-            'alternative_names' => NameHelper::normalizeList(array_filter([$work['alt'], $work['title']])),
+            'alternative_names' => NameHelper::normalizeList($this->workNames($work)),
             'type' => 'manga',
             'origin_type' => $work['origin'],
             'status' => $this->contentStatus($work['status']),
-            'is_adult' => false,
+            'is_adult' => (bool) $site['adult'],
             'cover' => $work['cover'],
             'release_year' => $work['year'],
             'country' => $country,
@@ -348,7 +372,7 @@ class ToonLivreLibraryService
                 default => 'ko',
             },
         ]);
-        LogHelper::info('Obra criada com dados do ToonLivre', ['content_id' => $content->id, 'work_id' => $work['id']]);
+        LogHelper::info('Obra criada com dados do site', ['site' => $site['key'], 'content_id' => $content->id, 'work_id' => $work['id']]);
 
         return $content;
     }
@@ -358,7 +382,7 @@ class ToonLivreLibraryService
     private function pickAniListMedia(array $work, array $results): ?array
     {
         $keys = $this->workKeys($work);
-        $names = array_filter([$work['alt'], $work['title']]);
+        $names = $this->workNames($work);
         $best = null;
         $bestRank = null;
         $sameYear = [];
@@ -415,11 +439,11 @@ class ToonLivreLibraryService
         return $best ?? (count($sameYear) === 1 ? $sameYear[0] : null);
     }
 
-    /** Adiciona os títulos do ToonLivre aos nomes alternativos da obra. */
+    /** Adiciona os títulos do site aos nomes alternativos da obra. */
     private function mergeNames(Content $content, array $work): void
     {
         $current = (array) ($content->alternative_names ?? []);
-        $merged = NameHelper::normalizeList(array_merge($current, array_filter([$work['alt'], $work['title']])));
+        $merged = NameHelper::normalizeList(array_merge($current, $this->workNames($work)));
 
         if ($merged !== array_values($current)) {
             $content->alternative_names = $merged;
@@ -427,11 +451,21 @@ class ToonLivreLibraryService
         }
     }
 
+    /**
+     * Todos os títulos da obra no site: EN, PT e outros nomes.
+     *
+     * @return array<int, string>
+     */
+    private function workNames(array $work): array
+    {
+        return array_values(array_unique(array_filter(array_merge([$work['alt'], $work['title']], $work['alts']))));
+    }
+
     /** @return array<int, string> */
     private function workKeys(array $work): array
     {
         $keys = [];
-        foreach (array_filter([$work['alt'], $work['title']]) as $t) {
+        foreach ($this->workNames($work) as $t) {
             $keys = array_merge($keys, $this->matcher->titleKeys($t));
         }
 
@@ -460,7 +494,7 @@ class ToonLivreLibraryService
     private function searchWords(array $work): array
     {
         $words = [];
-        foreach (array_filter([$work['alt'], $work['title']]) as $t) {
+        foreach ($this->workNames($work) as $t) {
             $tokens = explode(' ', $this->matcher->normalize($t));
             usort($tokens, fn ($a, $b) => strlen($b) <=> strlen($a));
             if (strlen($tokens[0] ?? '') >= 3) {
@@ -468,7 +502,7 @@ class ToonLivreLibraryService
             }
         }
 
-        return array_values(array_unique($words));
+        return array_slice(array_values(array_unique($words)), 0, 8);
     }
 
     private function yearOk(?int $a, ?int $b, int $tolerance): bool
@@ -476,13 +510,14 @@ class ToonLivreLibraryService
         return ! $a || ! $b || abs($a - $b) <= $tolerance;
     }
 
-    private function contentStatus(?string $toonStatus): string
+    /** ToonLivre: Ongoing/Completed/Hiatus/Canceled. TiaManhwa: Em lançamento/Completo/Hiato/Cancelado. */
+    private function contentStatus(?string $siteStatus): string
     {
-        $s = mb_strtolower((string) $toonStatus);
+        $s = mb_strtolower((string) $siteStatus);
 
         return match (true) {
-            str_contains($s, 'complet') || str_contains($s, 'finish') => 'completed',
-            str_contains($s, 'hiatus') => 'hiatus',
+            str_contains($s, 'complet') || str_contains($s, 'finish') || str_contains($s, 'finaliz') || str_contains($s, 'conclu') => 'completed',
+            str_contains($s, 'hiatus') || str_contains($s, 'hiato') => 'hiatus',
             str_contains($s, 'cancel') || str_contains($s, 'drop') => 'cancelled',
             default => 'ongoing',
         };

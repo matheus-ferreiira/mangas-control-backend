@@ -6,13 +6,14 @@ use App\Models\UserContent;
 use Illuminate\Support\Collection;
 
 /**
- * Vincula os lançamentos do ToonLivre (enviados pelo bookmarklet) aos itens da
- * biblioteca. Camadas, em ordem:
+ * Vincula os lançamentos de um site de leitura (ToonLivre, TiaManhwa — enviados
+ * pelo bookmarklet) aos itens da biblioteca. Camadas, em ordem:
  *
  *  1. ID da obra no site já salvo em `user_contents.site_work_id`;
- *  2. título exato — inglês (`alternativeTitle`) antes de português (`title`),
- *     primeiro como está e depois sem artigo inicial ("The Legend of..." ×
- *     "Legend of...");
+ *  2. título exato — inglês (`alternativeTitle`), português (`title`) e depois
+ *     os demais nomes do site (`alternativeTitles`, os "Outros Títulos" do
+ *     TiaManhwa), primeiro como está e depois sem artigo inicial
+ *     ("The Legend of..." × "Legend of...");
  *  3. título parecido (>= FUZZY_MIN) com ano de lançamento próximo. O ano separa
  *     continuações: "Solo Leveling" (2018) × "Solo Leveling: Ragnarok" (2024).
  *
@@ -31,6 +32,9 @@ class ChapterMatchService
     /** Diferença máxima de ano (ToonLivre às vezes usa o ano do web novel). */
     private const YEAR_TOLERANCE = 2;
 
+    /** Máximo de nomes alternativos aproveitados por obra. */
+    private const MAX_ALTS = 20;
+
     private const STOPWORDS = [
         'the', 'a', 'an', 'of', 'and', 'in', 'to',
         'o', 'os', 'as', 'de', 'do', 'da', 'dos', 'das', 'e', 'no', 'na',
@@ -40,9 +44,10 @@ class ChapterMatchService
      * Converte o payload do bookmarklet em lançamentos válidos. Tolerante ao
      * formato (itens malformados são ignorados) e compatível com o payload
      * antigo, que só tinha `alternativeTitle` + `chapter`. Mantém a primeira
-     * ocorrência de cada obra (a mais recente).
+     * ocorrência de cada obra (a mais recente); repetições da mesma obra só
+     * completam o que faltava (nomes alternativos e ano).
      *
-     * @return array<int, array{id: ?string, alt: ?string, title: ?string, year: ?int, chapter: string}>
+     * @return array<int, array{id: ?string, alt: ?string, title: ?string, alts: array<int, string>, year: ?int, chapter: string}>
      */
     public function parseReleases(array $input): array
     {
@@ -66,19 +71,27 @@ class ChapterMatchService
             }
 
             $id = $this->stringOrNull($r['id'] ?? null);
+            $alts = $this->stringList($r['alternativeTitles'] ?? null);
+            $year = $r['releaseYear'] ?? null;
+            $year = is_numeric($year) ? (int) $year : null;
+
             $dedup = $id !== null ? 'id:'.$id : 'title:'.$this->normalize($alt ?? $title);
             if (isset($seen[$dedup])) {
+                $first = &$releases[$seen[$dedup]];
+                $first['alts'] = array_slice(array_values(array_unique(array_merge($first['alts'], $alts))), 0, self::MAX_ALTS);
+                $first['year'] ??= $year;
+                unset($first);
+
                 continue;
             }
-            $seen[$dedup] = true;
-
-            $year = $r['releaseYear'] ?? null;
+            $seen[$dedup] = count($releases);
 
             $releases[] = [
                 'id' => $id,
                 'alt' => $alt,
                 'title' => $title,
-                'year' => is_numeric($year) ? (int) $year : null,
+                'alts' => $alts,
+                'year' => $year,
                 'chapter' => (string) $chapter,
             ];
         }
@@ -182,17 +195,65 @@ class ChapterMatchService
         return $this->similarity($this->prepare($a), $this->prepare($b));
     }
 
+    /**
+     * Nomes para procurar o item na busca de um site: os mesmos do vínculo, sem
+     * repetição, com os de alfabeto latino primeiro.
+     *
+     * @return array<int, string>
+     */
+    public function searchNames(UserContent $uc, int $max = 4): array
+    {
+        $latin = [];
+        $other = [];
+        foreach ($this->candidateNames($uc) as $name) {
+            $name = trim($name);
+            $key = mb_strtolower($name);
+            if (mb_strlen($name) < 3 || isset($latin[$key]) || isset($other[$key])) {
+                continue;
+            }
+            if (preg_match('/^[\p{Latin}\p{N}\p{P}\p{S}\p{Zs}]+$/u', $name)) {
+                $latin[$key] = $name;
+            } else {
+                $other[$key] = $name;
+            }
+        }
+
+        return array_slice(array_values(array_merge($latin, $other)), 0, $max);
+    }
+
+    /**
+     * Lista de nomes do payload: só strings não vazias, sem repetição.
+     *
+     * @return array<int, string>
+     */
+    public function stringList(mixed $v): array
+    {
+        if (! is_array($v)) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($v as $item) {
+            $s = $this->stringOrNull($item);
+            if ($s !== null && mb_strlen($s) <= 255) {
+                $out[$s] = true;
+            }
+        }
+
+        return array_slice(array_map('strval', array_keys($out)), 0, self::MAX_ALTS);
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Índices do payload: por ID e por título (4 tipos de chave, em ordem de
+     * Índices do payload: por ID e por título (6 tipos de chave, em ordem de
      * prioridade), mais títulos pré-processados para a camada 3.
      */
     private function buildIndex(array $releases): array
     {
         $index = [
             'byId' => [],
-            'byTitle' => ['alt' => [], 'title' => [], 'alt_loose' => [], 'title_loose' => []],
+            'byTitle' => ['alt' => [], 'title' => [], 'alts' => [], 'alt_loose' => [], 'title_loose' => [], 'alts_loose' => []],
             'prepared' => [],
             'hasIds' => false,
         ];
@@ -203,11 +264,16 @@ class ChapterMatchService
                 $index['hasIds'] = true;
             }
 
-            foreach (['alt', 'title'] as $field) {
-                if ($r[$field] === null) {
+            $fields = [['alt', $r['alt']], ['title', $r['title']]];
+            foreach ($r['alts'] as $other) {
+                $fields[] = ['alts', $other];
+            }
+
+            foreach ($fields as [$field, $name]) {
+                if ($name === null) {
                     continue;
                 }
-                $key = $this->normalize($r[$field]);
+                $key = $this->normalize($name);
                 if (mb_strlen($key) >= 3) {
                     $index['byTitle'][$field][$key][] = $i;
                 }
@@ -215,7 +281,7 @@ class ChapterMatchService
                 if (mb_strlen($loose) >= 3) {
                     $index['byTitle'][$field.'_loose'][$loose][] = $i;
                 }
-                $index['prepared'][$i][] = $this->prepare($r[$field]);
+                $index['prepared'][$i][] = $this->prepare($name);
             }
         }
 
@@ -223,16 +289,16 @@ class ChapterMatchService
     }
 
     /**
-     * Camada 2. Para cada tipo de chave (EN, PT, EN sem artigo, PT sem artigo),
-     * percorre os nomes do item em ordem de preferência; o primeiro que casar
-     * vence. Mesmo título para obras diferentes: desempata pelo ano mais próximo
-     * e, sem ano, fica com o lançamento mais recente (comportamento anterior).
+     * Camada 2. Para cada tipo de chave (EN, PT, outros nomes, e os três sem
+     * artigo), percorre os nomes do item em ordem de preferência; o primeiro que
+     * casar vence. Mesmo título para obras diferentes: desempata pelo ano mais
+     * próximo e, sem ano, fica com o lançamento mais recente (comportamento anterior).
      */
     private function exactMatch(UserContent $uc, array $index, array $releases): ?int
     {
         $names = $this->candidateNames($uc);
 
-        foreach (['alt', 'title', 'alt_loose', 'title_loose'] as $kind) {
+        foreach (['alt', 'title', 'alts', 'alt_loose', 'title_loose', 'alts_loose'] as $kind) {
             $loose = str_ends_with($kind, '_loose');
 
             foreach ($names as $name) {

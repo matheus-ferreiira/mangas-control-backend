@@ -3,10 +3,11 @@
 Este documento descreve o caminho completo de um manhwa: a requisição feita à
 AniList, os campos que ela devolve, como eles viram uma linha em `contents`, o
 formato exato em que a API entrega esses dados ao front e, à parte, como o
-último capítulo chega do ToonLivre pelo bookmarklet.
+último capítulo chega do ToonLivre e do TiaManhwa pelos bookmarklets.
 
 > Levantamento feito em **2026-09-30** contra a AniList, o ToonLivre e o banco
-> de produção (Railway). Os números das seções 7 e 10 são desse dia.
+> de produção (Railway). Os números das seções 7 e 11 são desse dia; os da
+> seção 8 (TiaManhwa) são de **2026-10-20**.
 
 ## 1. Visão geral
 
@@ -636,7 +637,131 @@ Nenhuma das 39 obras que já casavam mudou de obra. Na mesma simulação, com a
 regra antiga, o clique gravaria 2 mudanças (`site_last_chapter`: Pick Me Up
 220 → 221, Designated Bully 202 → 203), e 28 itens tinham `chapter > current_units`.
 
-## 8. O que o front usa hoje
+## 8. Capítulos: TiaManhwa (bookmarklet)
+
+O [TiaManhwa](https://tiamanhwa.com) é um WordPress com o tema **Madara**
+(plugin `madara-core`), atrás do Cloudflare. Como o ToonLivre, responde ao
+navegador e não ao servidor, então o sync também é um bookmarklet. As
+diferenças para o ToonLivre:
+
+- **Não há API JSON** para as obras (`/wp-json/wp/v2/wp-manga` dá 404): tudo
+  sai do HTML do tema.
+- **A listagem só traz o título em português.** O vínculo vem da busca do site,
+  que acha a obra pelo nome em inglês, e da página da obra, que lista os
+  "Outros Títulos" e o ano.
+- **A listagem cobre o catálogo inteiro**, não só lançamentos recentes. Toda
+  obra vinculada recebe o último capítulo em todo clique.
+
+O código fica em [front/src/bookmarklets/tiamanhwa.js](../../front/src/bookmarklets/tiamanhwa.js),
+em JS puro. O `ProfilePage.vue` importa o arquivo como texto (`?raw`), troca
+`'__API_BASE__'` e `'__TOKEN__'`, tira as linhas de comentário e codifica tudo
+como `javascript:` URL. O card só aparece para admin com o **Modo +18 ligado**.
+
+### O que o bookmarklet faz
+
+Ao clicar no favorito com `tiamanhwa.com` aberto, ele mostra o progresso num
+aviso no canto da tela e:
+
+1. Chama `GET {VITE_API_URL}/user/sync-chapters/candidates?site=tiamanhwa`:
+   ```json
+   { "site": "tiamanhwa",
+     "linked": ["2015", "23569"],
+     "unlinked": [ { "id": 812, "title": "Don't Tell Mom!", "names": ["Don't Tell Mom!", "Eommahante Bimil"], "year": 2021, "adult": true } ] }
+   ```
+   `linked` são os `site_work_id` já vinculados ao TiaManhwa. `unlinked` são os
+   itens de mangá sem fonte e sem `site_work_id`, com até 4 nomes (os de
+   alfabeto latino primeiro).
+2. Lê a listagem `GET /manhwa/page/N/?m_orderby=latest`, 3 páginas por vez,
+   até uma página sem obras. Em 2026-10-20 eram 26 páginas de 18 obras, e a 27
+   dava 404. De cada card `.page-item-detail` guarda o `data-post-id` (o ID do
+   post no WordPress, que vira o `site_work_id`), o título de `.post-title a` e
+   o 1º `.chapter-item` (o capítulo mais novo).
+3. Com login no site, lê `/user-settings/?tab=history` e `?tab=bookmark`. Sem
+   login o site redireciona para a home, e o alerta avisa. No histórico, cada
+   item é o bloco de `.remove-manga-history[data-manga]` (o mesmo seletor do JS
+   do tema). Nos favoritos, é a linha de `.bookmark-checkbox`. Uma obra que só
+   está nos favoritos, sem histórico, vai com `lastRead: null` e
+   `listStatus: "plan_to_read"`.
+4. Para cada obra de `unlinked` usa a busca do tema:
+   `POST /wp-admin/admin-ajax.php` com `action=wp-manga-search-manga&title=…`.
+   A resposta é `{"success":true,"data":[{"title":"Surpresa em Família","url":"https://tiamanhwa.com/manhwa/surpresa-em-familia/","type":"manga"}]}`
+   ou `{"success":false,"data":[{"error":"not found",…}]}`. Obras +18 tentam
+   até 4 nomes; as demais, que quase nunca estão no site, só o principal. Abre
+   a página de cada um dos 3 primeiros resultados e lê:
+
+   | Na página | Campo |
+   |---|---|
+   | `.post-title h1` | título PT |
+   | `.post-content_item` "Outros Títulos" | `alternativeTitles`: texto livre, separado por vírgula. Pedaço com menos de 4 letras é juntado ao anterior, para títulos com vírgula ("Eat First, Mom"). |
+   | "Lançamento" | `releaseYear` |
+   | "Tipo" / "Status" | `Pornhwa`, `Manhwa`… / `Em lançamento`, `Completo`… |
+   | `.wp-manga-action-button[data-post]` | ID da obra, se ela não estiver na listagem |
+   | 1º `li.wp-manga-chapter` | último capítulo |
+
+   A obra procurada, achada ou não, só volta a ser procurada depois de 7 dias.
+   O registro fica no `localStorage` do site (`neonCurator.tiaSearched`) e é
+   gravado só depois de um envio bem-sucedido. Busca que falha (HTTP de erro ou
+   resposta que não é o JSON do tema, ex.: limite de requisições) é tentada de
+   novo após 3 s. Se falhar de novo, a obra não é registrada e volta no próximo
+   clique. Entre buscas há uma pausa de 250 ms.
+5. Também abre a página das obras do histórico/favoritos que ainda não têm
+   vínculo (no máximo 60 por clique), para mandar os títulos e o ano.
+6. Envia `POST {VITE_API_URL}/user/sync-chapters`:
+   ```json
+   { "site": "tiamanhwa",
+     "releases": [
+       { "id": "2070", "title": "Serviço de Limpeza", "chapter": "38" },
+       { "id": "2070", "title": "Serviço de Limpeza", "alternativeTitles": ["Cleaning Service", "청소 서비스"], "releaseYear": "2024", "chapter": "38" }
+     ],
+     "reading": [
+       { "id": "2400", "title": "Meu Reino", "alternativeTitles": [], "lastRead": "160", "available": "160.5", "listStatus": null }
+     ] }
+   ```
+   `alternativeTitle` (singular) nunca vai: o `site_title` gravado é sempre o
+   título PT, então a listagem e a busca não ficam trocando o título.
+
+### O que muda no back
+
+- `POST /api/user/sync-chapters` aceita `site` (`toonlivre`, o padrão, ou
+  `tiamanhwa`). Os sites ficam em `config/content.php` (`reading_sites`), e o
+  TiaManhwa entra em `sites` pela migration
+  `2026_10_20_000001_add_tiamanhwa_site`.
+- **Um sync só mexe em itens sem fonte ou do próprio site**, nos dois sites. Um
+  item do ToonLivre não passa para o TiaManhwa nem o contrário, e itens de outro
+  site não entram em `checked` nem em `unmatched`. Se o histórico de um site
+  traz uma obra que está na biblioteca por outro site, ela só ganha o progresso.
+- `alternativeTitles` entra na camada 2 (depois do inglês e do português) e na
+  camada 3. Quando a mesma obra vem duas vezes (listagem e busca), a primeira
+  ocorrência fica, mas ganha os nomes e o ano da segunda.
+- Caso B: a AniList é buscada pelos outros títulos antes do português (no
+  máximo 4 buscas). Sem resultado, a obra é criada com `source = tiamanhwa`,
+  `external_id` = ID do post e `is_adult = true`.
+- A importação em segundo plano tem cache e lock por site
+  (`tiamanhwa-import:{user}`). O resultado sai em
+  `GET /api/user/sync-chapters/last-import?site=tiamanhwa`.
+- Favorito sem capítulo lido não tira a obra de "quero ler".
+
+### Simulação de 2026-10-20
+
+Simulação da biblioteca do usuário 1 com a busca e as páginas reais do site,
+sem gravar nada:
+
+| | |
+|---|---|
+| Itens de mangá sem vínculo | 58 (37 +18) |
+| Achados pela busca | 25 |
+| Vinculariam (título exato + ano a até 2 anos) | **23**, todos +18 |
+| Resultados descartados | 5: *Study Group* → "Grupo de Sextudo" (2022), *L.A.G* → 3 obras sem relação, *Childhood Friend* → "Utilidade de uma Amiga de Infância" (2025) |
+| Vínculos errados | 0 |
+| +18 que a busca não achou | 14 (outro nome no site ou fora do site) |
+| Com capítulo novo para quem já lia | 6: Cleaning Service 18 → 38, Moby Dick 98 → 107, Slave Code 26 → 27, Don't Tell Mom! 100 → 100.5, Magic-Girl Service 55 → 55.5, My Kingdom 160 → 160.5 |
+
+> O formato das abas de histórico e favoritos foi inferido do JS do tema
+> (`script.js` do `madara-core`): sem login não dá para ver o HTML. O alerta
+> mostra quantas obras vieram de cada aba, e se vier 0 com login, o seletor
+> precisa de ajuste.
+
+## 9. O que o front usa hoje
 
 - `contentService.getAll()` (`src/services/contentService.ts`) **não envia
   `origin_type` nem `format`**. A API filtra manhwa, mas o Discover não tem
@@ -645,7 +770,7 @@ regra antiga, o clique gravaria 2 mudanças (`site_last_chapter`: Pick Me Up
 - `origin_type` aparece no detalhe (`CatalogDetailPage.vue`) e no badge
   (`ContentTypeBadge.vue`, `MANHWA`).
 
-## 9. Simulação de atualização (dry-run de 2026-09-30)
+## 10. Simulação de atualização (dry-run de 2026-09-30)
 
 Mesmas requisições do import com todos os filtros de manhwa
 (`--type=manga --origin=manhwa --format=MANGA --pages=101 --force`, sem e com
@@ -682,7 +807,7 @@ Mesmas requisições do import com todos os filtros de manhwa
 - A AniList estava em modo degradado (`X-RateLimit-Limit: 30`). Com 2,3 s entre
   páginas não houve nenhum 429.
 
-## 10. Retrato do catálogo (produção, 2026-09-30)
+## 11. Retrato do catálogo (produção, 2026-09-30)
 
 | | Quantidade |
 |---|---|
@@ -699,4 +824,4 @@ Mesmas requisições do import com todos os filtros de manhwa
 | Último import (manhwa) | 2026-06-23 08:38 |
 | Manhwas na biblioteca (`user_contents`, todos os usuários) | 67 |
 | Obras vinculadas ao ToonLivre (usuário 1) | 40 |
-| Na AniList e fora do banco (seção 9) | 225 não adultos + 3.011 +18 (até o teto de 5.000 cada) |
+| Na AniList e fora do banco (seção 10) | 225 não adultos + 3.011 +18 (até o teto de 5.000 cada) |

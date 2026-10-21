@@ -9,7 +9,9 @@ use App\Services\ToonLivreLibraryService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\Rule;
 
 use function Illuminate\Support\defer;
 
@@ -17,8 +19,11 @@ class ChapterCheckController extends Controller
 {
     use ApiResponse;
 
-    /** Resultado da última importação em segundo plano (por usuário). */
-    private const IMPORT_CACHE = 'toonlivre-import:';
+    /** Site quando o payload não diz (os bookmarklets antigos são todos do ToonLivre). */
+    private const DEFAULT_SITE = 'toonlivre';
+
+    /** Máximo de obras sem vínculo devolvidas para o bookmarklet procurar no site. */
+    private const MAX_CANDIDATES = 200;
 
     public function __construct(
         private ChapterMatchService $matcher,
@@ -28,18 +33,21 @@ class ChapterCheckController extends Controller
     /**
      * Recebe os dados coletados pelo app (client-side) e faz o match com a
      * biblioteca do usuário. O fetch ao site é feito no navegador do usuário
-     * (cliente real), pois o site bloqueia requests server-side.
+     * (cliente real), pois os sites bloqueiam requests server-side.
      *
-     *  - `releases`: lançamentos recentes do site (último capítulo disponível);
+     *  - `site`:     'toonlivre' (padrão) ou 'tiamanhwa' (config/content.php);
+     *  - `releases`: lançamentos do site (último capítulo disponível);
      *  - `reading`:  histórico de leitura do usuário no site (ver
      *                ToonLivreLibraryService) — avança o progresso e traz para a
-     *                biblioteca o que só foi lido no ToonLivre.
+     *                biblioteca o que só foi lido lá.
+     *
+     * Só entram itens sem fonte ou já vinculados a este site: um item de outro
+     * site nunca muda de fonte por aqui.
      *
      * O vínculo (ver ChapterMatchService) usa, em ordem: o ID da obra no site
-     * já salvo, o título exato em inglês/português e, por último, título
-     * parecido com ano próximo. Em um casamento, define a fonte como
-     * ToonLivre, guarda o ID da obra, corrige o site_title para bater
-     * exatamente com o site e grava o último capítulo disponível.
+     * já salvo, o título exato e, por último, título parecido com ano próximo.
+     * Em um casamento, define a fonte como o site, guarda o ID da obra, corrige o
+     * site_title para bater exatamente com o site e grava o último capítulo.
      *
      * Obras do histórico que não estão no catálogo dependem da AniList e são
      * importadas depois da resposta (defer); o resultado sai em lastImport().
@@ -47,22 +55,24 @@ class ChapterCheckController extends Controller
     public function syncFromClient(Request $request): JsonResponse
     {
         $request->validate([
+            'site' => $this->siteRule(),
             'releases' => ['nullable', 'array'],
             'reading' => ['nullable', 'array'],
         ]);
 
         $userId = (int) auth()->id();
-        $toonId = optional(Site::where('url', 'like', '%toonlivre%')->first())->id;
+        $site = $this->site($request);
+        $siteId = $site['id'];
 
         $reading = $this->library->parseReading((array) $request->input('reading', []));
         $readingById = array_column($reading, null, 'id');
 
-        // O histórico entra como lançamento (capítulo disponível vindo do by-ids,
+        // O histórico entra como lançamento (capítulo disponível vindo do site,
         // mais atual que o feed) para usar o mesmo vínculo por ID/título.
         $asReleases = [];
         foreach ($reading as $w) {
             if ($w['available'] !== null) {
-                $asReleases[] = ['id' => $w['id'], 'alternativeTitle' => $w['alt'], 'title' => $w['title'], 'releaseYear' => $w['year'], 'chapter' => $w['available']];
+                $asReleases[] = ['id' => $w['id'], 'alternativeTitle' => $w['alt'], 'title' => $w['title'], 'alternativeTitles' => $w['alts'], 'releaseYear' => $w['year'], 'chapter' => $w['available']];
             }
         }
 
@@ -72,9 +82,7 @@ class ChapterCheckController extends Controller
         }
         $payloadHasIds = collect($releases)->contains(fn ($r) => $r['id'] !== null);
 
-        $items = UserContent::with('content')
-            ->where('user_id', $userId)
-            ->get();
+        $items = $this->eligibleItems($userId, $siteId);
 
         $matches = $this->matcher->match($items, $releases);
 
@@ -107,8 +115,8 @@ class ChapterCheckController extends Controller
             $siteTitle = $hit['alt'] ?? $hit['title'];
             $dirty = false;
 
-            if ($toonId && (int) $uc->site_id !== (int) $toonId) {
-                $uc->site_id = $toonId;
+            if ($siteId && (int) $uc->site_id !== (int) $siteId) {
+                $uc->site_id = $siteId;
                 $linked++;
                 $dirty = true;
             }
@@ -141,7 +149,9 @@ class ChapterCheckController extends Controller
         }
 
         // Caso 0: histórico de obras já na biblioteca → avança o progresso.
-        $byWorkId = $items->filter(fn ($u) => ! empty($u->site_work_id))->keyBy('site_work_id');
+        $byWorkId = $items
+            ->filter(fn ($u) => ! empty($u->site_work_id) && (int) $u->site_id === (int) $siteId)
+            ->keyBy('site_work_id');
         $missing = [];
 
         foreach ($reading as $w) {
@@ -175,25 +185,26 @@ class ChapterCheckController extends Controller
         foreach ($missing as $w) {
             $content = $this->library->findInCatalog($w);
             if ($content) {
-                $this->library->addToLibrary($userId, $content, $w, $toonId);
+                $this->library->addToLibrary($userId, $content, $w, $siteId);
                 $added[] = ['title' => $content->name, 'site_title' => $w['alt'] ?? $w['title']];
             } else {
                 $toImport[] = $w;
             }
         }
 
-        $lastImport = Cache::get(self::IMPORT_CACHE.$userId);
+        $lastImport = Cache::get($this->importCacheKey($site, $userId));
 
-        // Caso B: AniList / dados do ToonLivre, depois da resposta.
+        // Caso B: AniList / dados do site, depois da resposta.
         if ($toImport) {
-            $this->queueImport($userId, $toImport, $toonId);
+            $this->queueImport($userId, $toImport, $site);
         }
 
-        $totalLinked = $toonId
-            ? UserContent::where('user_id', $userId)->where('site_id', $toonId)->count()
+        $totalLinked = $siteId
+            ? UserContent::where('user_id', $userId)->where('site_id', $siteId)->count()
             : 0;
 
         return $this->success([
+            'site' => $site['key'],
             'checked' => $checked,
             'updated' => $updated,
             'linked' => $linked,
@@ -210,22 +221,61 @@ class ChapterCheckController extends Controller
         ], 'Sincronização concluída.');
     }
 
-    /** Resultado da última importação em segundo plano. */
-    public function lastImport(): JsonResponse
+    /**
+     * Para sites cuja listagem não traz o título em inglês (TiaManhwa): itens
+     * de mangá da biblioteca ainda sem vínculo, com os nomes a procurar na busca
+     * do site, e os IDs de obra já vinculados (esses o bookmarklet não procura).
+     */
+    public function candidates(Request $request): JsonResponse
     {
-        return $this->success(Cache::get(self::IMPORT_CACHE.auth()->id()));
+        $request->validate(['site' => $this->siteRule()]);
+
+        $site = $this->site($request);
+        $items = $this->eligibleItems((int) auth()->id(), $site['id']);
+
+        $linked = $items
+            ->filter(fn ($u) => ! empty($u->site_work_id) && (int) $u->site_id === (int) $site['id'])
+            ->pluck('site_work_id')
+            ->values();
+
+        $unlinked = $items
+            ->filter(fn ($u) => empty($u->site_work_id) && $u->content?->type === 'manga')
+            ->take(self::MAX_CANDIDATES)
+            ->map(fn ($u) => [
+                'id' => $u->id,
+                'title' => $u->content->name,
+                'names' => $this->matcher->searchNames($u),
+                'year' => $u->content->release_year,
+                'adult' => (bool) $u->content->is_adult,
+            ])
+            ->filter(fn ($c) => $c['names'])
+            ->values();
+
+        return $this->success([
+            'site' => $site['key'],
+            'linked' => $linked,
+            'unlinked' => $unlinked,
+        ]);
+    }
+
+    /** Resultado da última importação em segundo plano (`?site=`, padrão ToonLivre). */
+    public function lastImport(Request $request): JsonResponse
+    {
+        $request->validate(['site' => $this->siteRule()]);
+
+        return $this->success(Cache::get($this->importCacheKey($this->site($request), (int) auth()->id())));
     }
 
     /**
      * Importa depois de enviar a resposta (php-fpm: fastcgi_finish_request), sem
-     * depender de fila. O lock evita dois imports simultâneos do mesmo usuário;
-     * o que não entrar agora é tentado de novo no próximo sync.
+     * depender de fila. O lock evita dois imports simultâneos do mesmo usuário
+     * no mesmo site; o que não entrar agora é tentado de novo no próximo sync.
      */
-    private function queueImport(int $userId, array $works, ?int $toonId): void
+    private function queueImport(int $userId, array $works, array $site): void
     {
-        $key = self::IMPORT_CACHE.$userId;
+        $key = $this->importCacheKey($site, $userId);
 
-        defer(function () use ($userId, $works, $toonId, $key) {
+        defer(function () use ($userId, $works, $site, $key) {
             $lock = Cache::lock($key.':lock', 1800);
             if (! $lock->get()) {
                 return;
@@ -237,7 +287,7 @@ class ChapterCheckController extends Controller
 
                 Cache::put($key, ['status' => 'running', 'started_at' => now()->toIso8601String(), 'total' => count($works)], now()->addDays(7));
 
-                $results = $this->library->importMissing($userId, $works, $toonId);
+                $results = $this->library->importMissing($userId, $works, $site);
 
                 Cache::put($key, [
                     'status' => 'done',
@@ -249,6 +299,41 @@ class ChapterCheckController extends Controller
                 $lock->release();
             }
         });
+    }
+
+    /** Itens que o sync do site pode tocar: sem fonte ou já deste site. */
+    private function eligibleItems(int $userId, ?int $siteId): Collection
+    {
+        return UserContent::with('content')
+            ->where('user_id', $userId)
+            ->where(fn ($q) => $siteId
+                ? $q->whereNull('site_id')->orWhere('site_id', $siteId)
+                : $q->whereNull('site_id'))
+            ->get();
+    }
+
+    /** @return array{key: string, id: ?int, adult: bool} */
+    private function site(Request $request): array
+    {
+        $key = (string) ($request->input('site') ?: self::DEFAULT_SITE);
+        $config = config('content.reading_sites.'.$key);
+
+        return [
+            'key' => $key,
+            'id' => optional(Site::where('url', 'like', $config['url_like'])->first())->id,
+            'adult' => (bool) $config['adult'],
+        ];
+    }
+
+    private function siteRule(): array
+    {
+        return ['nullable', 'string', Rule::in(array_keys(config('content.reading_sites')))];
+    }
+
+    /** Ex.: "toonlivre-import:1" (mesma chave de antes para o ToonLivre). */
+    private function importCacheKey(array $site, int $userId): string
+    {
+        return $site['key'].'-import:'.$userId;
     }
 
     private function toFloat(mixed $v): float
