@@ -19,12 +19,16 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <!-- Chave só de teste: os testes não dependem do APP_KEY de nenhum .env. -->
+        <env name="APP_KEY" value="base64:qE4/jQ6M4Sb06ihBfMRePglIEYmONA1Qbg4uHER4D9U=" force="true"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
+        <!-- force: o .env de produção define DB_URL, que a conexão sqlite também lê. -->
+        <env name="DB_CONNECTION" value="sqlite" force="true"/>
+        <env name="DB_DATABASE" value=":memory:" force="true"/>
+        <env name="DB_URL" value="" force="true"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
