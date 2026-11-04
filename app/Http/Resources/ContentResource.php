@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\NovelReaderService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -20,6 +21,7 @@ class ContentResource extends JsonResource
 
             // Nomes
             'name' => $this->name,
+            'reader' => app(NovelReaderService::class)->metadata($this->resource),
             'alternative_names' => $this->alternative_names ?? [],
 
             // Mídia

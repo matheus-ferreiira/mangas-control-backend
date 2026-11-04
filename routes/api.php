@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChapterCheckController;
 use App\Http\Controllers\ContentController;
 use App\Http\Controllers\DiscoverController;
+use App\Http\Controllers\NovelReaderController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\UserContentController;
 use App\Http\Controllers\UserSiteController;
@@ -28,6 +29,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user/sync-chapters/candidates', [ChapterCheckController::class, 'candidates']);
 
     Route::get('/discover/home', [DiscoverController::class, 'home']);
+
+    Route::get('/contents/{id}/reader', [NovelReaderController::class, 'index'])->whereNumber('id');
+    Route::get('/contents/{id}/reader/{chapter}', [NovelReaderController::class, 'show'])
+        ->whereNumber(['id', 'chapter']);
 
     Route::apiResource('contents', ContentController::class)->only(['index', 'show']);
     Route::apiResource('sites', SiteController::class);
