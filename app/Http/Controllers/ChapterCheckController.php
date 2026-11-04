@@ -301,11 +301,16 @@ class ChapterCheckController extends Controller
         });
     }
 
-    /** Itens que o sync do site pode tocar: sem fonte ou já deste site. */
+    /**
+     * Itens que o sync do site pode tocar: mangás (os sites só têm mangá/manhwa)
+     * sem fonte ou já deste site. Sem o filtro de tipo, uma novel com os mesmos
+     * nomes do manhwa (ex.: The Swordmaster's Son) casaria com o lançamento dele.
+     */
     private function eligibleItems(int $userId, ?int $siteId): Collection
     {
         return UserContent::with('content')
             ->where('user_id', $userId)
+            ->whereHas('content', fn ($q) => $q->where('type', 'manga'))
             ->where(fn ($q) => $siteId
                 ? $q->whereNull('site_id')->orWhere('site_id', $siteId)
                 : $q->whereNull('site_id'))

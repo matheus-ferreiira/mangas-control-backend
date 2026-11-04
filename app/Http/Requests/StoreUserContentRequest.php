@@ -48,6 +48,7 @@ class StoreUserContentRequest extends BaseFormRequest
             'rating' => ['nullable', 'numeric', 'min:0', 'max:10'],
             'status' => ['nullable', 'in:reading,completed,paused,dropped,plan_to_read'],
             'site_title' => ['nullable', 'string', 'max:255'],
+            'chapter_url' => ['nullable', 'string', 'max:500', 'regex:/^https?:\/\/\S+$/i'],
         ];
     }
 

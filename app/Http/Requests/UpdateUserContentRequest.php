@@ -42,6 +42,7 @@ class UpdateUserContentRequest extends BaseFormRequest
             'rating' => ['nullable', 'numeric', 'min:0', 'max:10'],
             'status' => ['sometimes', 'in:reading,completed,paused,dropped,plan_to_read'],
             'site_title' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'chapter_url' => ['sometimes', 'nullable', 'string', 'max:500', 'regex:/^https?:\/\/\S+$/i'],
         ];
     }
 }

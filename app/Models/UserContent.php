@@ -16,6 +16,7 @@ class UserContent extends Model
         'site_title',
         'site_last_chapter',
         'site_work_id',
+        'chapter_url',
         'current_units',
         'current_season',
         'last_unit_update',

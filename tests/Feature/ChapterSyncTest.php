@@ -203,4 +203,30 @@ class ChapterSyncTest extends TestCase
 
         $this->assertSame('221', $uc->refresh()->site_last_chapter);
     }
+
+    public function test_novel_with_the_manhwa_title_is_not_touched(): void
+    {
+        $manhwa = $this->libraryItem("The Swordmaster's Son", 2022, ["Swordmaster's Youngest Son"]);
+        $novelContent = Content::create([
+            'name' => "Swordmaster's Youngest Son",
+            'type' => 'novel',
+            'format' => 'novel',
+            'alternative_names' => ["Swordmaster's Youngest Son", "The Swordmaster's Son"],
+        ]);
+        $novel = UserContent::create([
+            'user_id' => $this->user->id,
+            'content_id' => $novelContent->id,
+            'current_units' => 448,
+            'status' => 'reading',
+        ]);
+
+        $data = $this->sync([$this->release('obra-sms', "The Swordmaster's Son", 'O Filho do Mestre', '2022', '230')]);
+
+        $this->assertSame('230', $manhwa->refresh()->site_last_chapter);
+        $novel->refresh();
+        $this->assertNull($novel->site_id);
+        $this->assertNull($novel->site_last_chapter);
+        $this->assertNull($novel->site_work_id);
+        $this->assertSame(1, $data['checked']);
+    }
 }
