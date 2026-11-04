@@ -8,7 +8,7 @@ Sem migrations ou alterações administrativas no banco. O vínculo usa nomes e 
 
 ## Preparação do texto
 
-Origem: sete pastas Drive fornecidas pelo usuário; 747 DOCX preservados localmente fora dos repositórios. O corpus contém sugestões destrutivas e comentários de leitores. A preparação rejeita sugestões de inserção e restaura texto excluído, preservando os parágrafos e removendo comentários da narrativa. Essa é uma base conservadora, não uma revisão editorial ou tradução humana. Auditoria acompanha o corpus. Não concatenar indiscriminadamente todos os runs do XML nem aceitar todas as sugestões.
+Origem: sete pastas Drive fornecidas pelo usuário; 747 DOCX preservados localmente fora dos repositórios. A preparação restaura a base anterior às sugestões destrutivas e aplica correções selecionadas, glossário e reparos de parágrafos. O resultado tem `edition=reviewed`; notas do tradutor ficam separadas da narrativa em `translator_notes`. Critérios, decisões e limites estão em [novel-editorial-review.md](novel-editorial-review.md). Não concatenar indiscriminadamente os runs do XML nem aceitar todas as sugestões.
 
 ## Componentes e contrato
 
@@ -34,13 +34,13 @@ Respostas API usam o envelope padrão. Obra não vinculada/tipo incorreto/capít
 
 ## Reproduzir a preparação
 
-Na raiz do backend: `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/prepare-novel.ps1 -Source ../capitulos`. A origem precisa conter manifesto e DOCX organizados por pasta Drive. Gera capítulos JSON, `index.json` e `audit.json`, com SHA-256 dos DOCX. Falha com capítulo vazio, caracteres inválidos, lacunas ou duplicados. Corpus pronto: aproximadamente 8,7 MB. DOCX, comentários e URLs temporárias de download não entram no Git.
+Na raiz do backend: `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/prepare-novel.ps1 -Source ../capitulos`. Gera a base e executa `novel-editorial.cjs`. A origem precisa conter manifesto e DOCX organizados por pasta Drive. Gera JSON, `index.json`, auditoria dos DOCX e auditoria editorial. Falha com capítulo vazio, caracteres inválidos, lacunas, duplicados ou âncoras editoriais divergentes. `-OriginalOnly` gera apenas a base sem revisão. DOCX, comentários e URLs temporárias de download não entram no Git.
 
 ## Implementação — Sumário
 
 - **O que:** 747 capítulos preparados, recuperação das exclusões e leitor web/Android. Todos têm pelo menos 8.588 caracteres na validação. Vínculo confirmado para a novel de produção ID 13755, por título, sem alterar cadastro.
 - **Como:** controller → service → JSON; `ContentResource.reader` informa disponibilidade; duas rotas API e Blade assinado. Aliases em `config/novels.php`, apenas tipo novel.
-- **Por quê:** evitar migration/escrita preparatória e downloads do Drive durante cada leitura. Rejeitar sugestões evita vandalismo; pequenas correções legítimas também ficam fora desta edição conservadora.
+- **Por quê:** evitar migration/escrita preparatória e downloads do Drive durante cada leitura. A base recuperada evita sugestões destrutivas; a etapa editorial reaplica correções selecionadas e padronização documentadas em `novel-editorial-review.md`.
 - **Arquivos:** `scripts/prepare-novel.ps1`, `resources/novels/swordmasters-youngest-son/*`, `config/novels.php`, `NovelReaderService`, `NovelReaderController`, `ContentResource`, rotas API/web, `resources/views/novel-reader.blade.php`, `tests/Feature/NovelReaderTest.php`. Frontend documentado em seu `docs/novel-reader.md`.
 - **Validação:** 49 testes backend / 2.486 asserções, com `.env.local` e SQLite em memória; ambiente original restaurado. Build frontend e 14 testes aprovados. APK debug gerado. Consulta somente leitura confirmou novel e ausência de migrations pendentes. Nenhuma escrita preparatória em produção.
 - **Limitações:** conferência estrutural e amostras, sem revisão editorial integral ou renderização de todos os DOCX. Requer conexão. Tradução depende do navegador e a aba externa não grava automaticamente o histórico.

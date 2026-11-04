@@ -1,6 +1,7 @@
 param(
     [string]$Source = (Join-Path $PSScriptRoot '../../capitulos'),
-    [string]$Destination = (Join-Path $PSScriptRoot '../resources/novels/swordmasters-youngest-son')
+    [string]$Destination = (Join-Path $PSScriptRoot '../resources/novels/swordmasters-youngest-son'),
+    [switch]$OriginalOnly
 )
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -36,3 +37,9 @@ $index = [ordered]@{ slug='swordmasters-youngest-son'; title="Swordmaster's Youn
 [IO.File]::WriteAllText((Join-Path $Destination 'index.json'), ($index | ConvertTo-Json -Depth 4), $utf8)
 [IO.File]::WriteAllText((Join-Path $Destination 'audit.json'), ($audit | Sort-Object number | ConvertTo-Json -Depth 4), $utf8)
 Write-Output "Prepared $($numbers.Count) chapters. Minimum characters: $(($audit | Measure-Object characters -Minimum).Minimum)"
+if (-not $OriginalOnly) {
+    $expectedDestination = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../resources/novels/swordmasters-youngest-son'))
+    if ([IO.Path]::GetFullPath($Destination) -ne $expectedDestination) { throw 'Use -OriginalOnly for a custom destination.' }
+    & node (Join-Path $PSScriptRoot 'novel-editorial.cjs')
+    if ($LASTEXITCODE -ne 0) { throw 'Editorial preparation failed.' }
+}
