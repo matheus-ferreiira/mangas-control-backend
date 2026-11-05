@@ -72,3 +72,13 @@ test('contextual pronouns and translator notes stay separate from narration', ()
     assert.ok(chapter(1074).translator_notes.length > 0);
     assert.ok(!chapter(1074).paragraphs.includes('Note:'));
 });
+
+test('wiki names normalize confirmed variants without conflating other people or places', () => {
+    assert.equal(normalizeNames('Shirone Runcandle, Sirone, Shilon and Cyrone.'), 'Chiron Runcandel, Chiron, Chiron and Chiron.');
+    assert.equal(normalizeNames('Zipple, Gliyak, Quicantel, Leuth, Paitel, Kidard and Paddler.'), 'Zipfel, Gliek, Quikantel, Lueth, Peitel, Keydart and Padler.');
+    const distinct = 'Mitel, Draka, Draca, Luna, Diana, Free, Rok, Locke, Luke and Mureka. Let him go.';
+    assert.equal(normalizeNames(distinct), distinct);
+    for (const canonical of Object.keys(JSON.parse(fs.readFileSync(path.join(directory, '../editorial-glossary.json'), 'utf8')))) {
+        assert.equal(normalizeNames(canonical), canonical, canonical);
+    }
+});

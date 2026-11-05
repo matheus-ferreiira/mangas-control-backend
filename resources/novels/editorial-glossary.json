@@ -1,86 +1,737 @@
 {
-  "Runcandel": ["Runkandel", "Run Kandel", "Run-Kandel", "Runecandel", "Runecandle", "Runekandel", "Runekendel", "Runckandel", "Runckel", "Runckandel", "Runcandell", "Runkandal", "Runkandelle", "Runkandelian", "Rune Kandel", "Rune Candle", "Rune Candela", "Run Candel", "RunCandel", "RunKandel", "RunCandle", "Roon Candle", "Lunkandel", "Lunkendel", "Luncandel", "Luncandle", "Luncandale", "Lun Kandel", "Lun Kandell", "Lun Candle", "Lun Candel", "Lun Kendel", "Lun Kendall", "Lunacandel", "Lunakandel", "Lunckandel", "Lundell", "Lundel", "Rucandel", "Runandel"],
-  "Runcandels": ["Runkandels", "Runecandles", "Runecandels", "Rune Kandels", "Rune Candles", "Runkandelians"],
-  "Zipple": ["Zipel", "Zippel", "Zippell", "Zifel", "Zifell", "Ziffle", "Ziffel", "Zifl", "Zifil", "Zif", "Zipl", "Ziple", "Zipil", "Zipul", "Ziphl", "Zipfl", "Ziphe", "Ziphr", "Ziphil", "Ziphl", "Zipheul", "Ziphel", "Ziph", "Zipfel", "Zipfle", "Zipfe", "Ziepl", "Ziepel", "Ziefl", "Ziepf", "Zieffel", "Ziephl", "Zieph", "Ziephel", "Jipl", "Jiple", "Jipel", "Jipil", "Jipul", "Jipfur", "Jipley", "Jieful", "Jiffel", "Jiffle", "Gipel", "Giepl", "Zhipil", "Zhiple", "Zephl", "Zyphl"],
-  "Kinzelo": ["Kinzello", "Kinzel", "Kinselo", "Kinsello", "Kinslow", "Kinsel", "Kincello", "Kinjelo", "Kinjello", "Kinjero"],
-  "Chiron": ["Siron", "Shiron", "Sirron", "Syron", "Si-ron", "Sirion", "Cylon", "Cyron"],
-  "Kelliark": ["Kelliac", "Kelliack", "Kelliak", "Kellic", "Kellick", "Kellicak", "Kelriak", "Kellyak", "Kelliaak", "Kelliac"],
-  "Veradin": ["Beradin", "Vera Din", "Beradyne", "BeraDyne"],
-  "Vahn": ["Ban", "Van"],
-  "Zito": ["Jito", "Gito"],
-  "Talaris": ["Talris", "Talalis", "Talarris", "Talalris", "Talari", "Talares"],
-  "Syris": ["Sirius", "Cyrus", "Siris", "Ciris"],
-  "Luntia": ["Runtia", "Runthia", "Runtyia", "Runetia", "Lunita"],
-  "Mary": ["Meri", "Mery", "Merry"],
-  "Gilly": ["Gilli", "Gili"],
-  "Lata": ["Rata"],
-  "Fey": ["Fei", "Pei"],
-  "Proch": ["Procchi", "Prochi"],
-  "Diphus": ["Dephus", "Defuse", "Defus", "Difus", "Dyfus", "Dipus"],
-  "Vigo": ["Vugo", "Buego"],
-  "Vermont": ["Bement", "Biment", "Bivment", "Bimont", "Bimunt", "Bument", "Viment", "Vermontt"],
-  "Vamel": ["Barmel", "Barmul", "Bamel", "Bamul", "Bammel", "Varmel", "Vammel"],
-  "Hairan": ["Hiran", "Hailan", "Hyran", "Hi-Ran", "Highlan", "Hyeran", "Hayran"],
-  "Tikan": ["Tichan", "Tican", "Tikkan", "Tikhan", "Teekan", "Tickan"],
-  "Lokia": ["Rokia", "Lokiya", "Rokiah"],
-  "Elona": ["Elrona", "Elerona", "Ellona", "Elorna"],
-  "Phaelito": ["Paelleto", "Paelleito", "Paelrito", "Paelito", "Paerleto", "Parielito", "Parelioto", "Faelito", "Parieto"],
-  "Ayula": ["Ayura", "Ayulra"],
-  "Shimat": ["Shimart", "Simart", "Simat", "Shimate", "Shimar"],
-  "Eltiot": ["Eltyeot", "Eltieot", "Eltyiet", "Eltieth", "Eltiyet", "Eltieit"],
-  "Bale": ["Veil", "Vail", "Beil"],
-  "Orgal": ["Orugal"],
-  "Gliyak": ["Gleak", "Gliac", "Glieck", "Gleyek", "Grieq", "Grieq", "Gliac", "Gliek", "Gleek"],
-  "Solderet": ["Soldelet", "Soldieret", "Soldeuret", "Soldierlet", "Solterlet", "Soldrett", "Soldret", "Soldrelt", "Soldorette"],
-  "Hedo": ["Hedow", "Hedoh", "Heodo"],
-  "Zephyrin": ["Zephrine", "Jephyrin", "Jephirin", "Jephrin", "Jepirin", "Zephirin"],
-  "Bishkel": ["Vishukel", "Bishukel", "Vischel"],
-  "Valkas": ["Balkas"],
-  "Kadun": ["Cadun"],
-  "Temar": ["Tamar", "Themer"],
-  "Murakan": ["Muraikan", "Moorakan"],
-  "Barisada": ["Varisada"],
-  "Hister": ["Hester", "Hyster"],
-  "Quicantel": ["Qucantel"],
-  "Mort": ["Mot", "Moat", "Motte", "Mote", "Mott"],
-  "Tess": ["Tes", "Teth"],
-  "Sarah": ["Sara"],
-  "Anne": ["Ann"],
-  "Myu": ["Mu", "Mew"],
-  "Lani": ["Rani"],
-  "Queen Lani": ["King Lani", "King Rani"],
-  "Jet": ["Zet"],
-  "Zed": ["Jed", "Jedd"],
-  "Paddler": ["Pardler", "Paradelar", "Paddleur", "Padlur", "Padler"],
-  "Berakt": ["Beract", "Belract", "Veract", "Barakt", "Belakht"],
-  "Vankella": ["Bancella", "Bankella", "Banquilla"],
-  "Huphester": ["Hyuphester", "HyuFester", "Hufester"],
-  "Patlok": ["Patl", "Pattle", "Partl"],
-  "Rakiman": ["Lakiman"],
-  "Ram": ["Lam"],
-  "Linpa": ["Linfa"],
-  "Lin": ["Rin"],
-  "Ragal": ["Lagal"],
-  "Grenil": ["Grnil", "Grunil"],
-  "Krantel": ["Crantel"],
-  "Paitel": ["Faitel", "Pheitel", "Faytel", "Payitel", "Peitel"],
-  "Leuth": ["Luet", "Lueth", "Leot", "Leat", "Luret", "Lehet", "Lret", "Lreat", "Lrett"],
-  "Kidard": ["Kidado", "Kidad"],
-  "Viseps": ["Biseps", "Bisepts", "Bicepts", "Bisechs", "Bisekhs"],
-  "Qwaul": ["Kwaul", "Kwa-ul", "Kwool", "Kwaoul", "Qwaoul", "Quaoul"],
-  "White Whale": ["Baekgyeong"],
-  "Nameless Assassins": ["Moomyeong"],
-  "Young Patriarch": ["Sogaju", "SoGaJoo"],
-  "Young Palace Master": ["Sogungju", "Sovereign of the Small Palace"],
-  "Lingling": ["Ringring", "RingRing", "LingLing"],
-  "Jin": ["Chin"],
-  "Holy Tree Crown": ["Holy Water Vessel"],
-  "Hidden Palace": ["Bi-Gung", "Bi-gung", "BiGung", "Bigung", "Begug", "Bi-Kyung"],
-  "Genesis": ["Changseong", "Changsung", "Chang Sung"],
-  "Sigmund": ["Siegmund"],
-  "Bradamante": ["Brada Manta", "Brada Mante", "BradaMante", "BradeManta", "Brahadamante", "BradMante", "Bramante"],
-  "Lafrarosa": ["Laprarosa", "Laphrarosa", "Laphlarosa", "Laplarosa", "Raplarosa", "Lapralosa", "Rafarosa", "Laparosa"],
-  "Red Plutonian": ["Jeokmyeong", "Jukmyeong", "Chakmyeong", "Juckmyung", "Jeokmyeok"],
-  "Blue Plutonian": ["Cheongmyeong", "Qingming"],
-  "Sister Goddess of Battle": ["Battle God Sister", "Battle God sister", "Sister Battle God", "sister Battle God", "God sister", "Two Gods brother", "Two Gods brothers", "Two Gods Brother", "Two Gods Brothers"]
+  "Runcandel": [
+    "Runkandel",
+    "Run Kandel",
+    "Run-Kandel",
+    "Runecandel",
+    "Runecandle",
+    "Runekandel",
+    "Runekendel",
+    "Runckandel",
+    "Runckel",
+    "Runcandell",
+    "Runkandal",
+    "Runkandelle",
+    "Runkandelian",
+    "Rune Kandel",
+    "Rune Candle",
+    "Rune Candela",
+    "Run Candel",
+    "RunCandel",
+    "RunKandel",
+    "RunCandle",
+    "Roon Candle",
+    "Lunkandel",
+    "Lunkendel",
+    "Luncandel",
+    "Luncandle",
+    "Luncandale",
+    "Lun Kandel",
+    "Lun Kandell",
+    "Lun Candle",
+    "Lun Candel",
+    "Lun Kendel",
+    "Lun Kendall",
+    "Lunacandel",
+    "Lunakandel",
+    "Lunckandel",
+    "Lundell",
+    "Lundel",
+    "Rucandel",
+    "Runandel",
+    "Runcandle",
+    "Runcan",
+    "Runecandl",
+    "RuneCandel",
+    "Runcondel",
+    "Runkendel",
+    "Rukandel",
+    "Runthandel",
+    "Runckendel",
+    "Runkandell",
+    "Runakandel",
+    "RuncanDel",
+    "Runckandell",
+    "Lunandel",
+    "Luncandell",
+    "Runecendel",
+    "Runecandela",
+    "Runkundel",
+    "Luncondel",
+    "Runeandel"
+  ],
+  "Runcandels": [
+    "Runkandels",
+    "Runecandles",
+    "Runecandels",
+    "Rune Kandels",
+    "Rune Candles",
+    "Runkandelians"
+  ],
+  "Kinzelo": [
+    "Kinzello",
+    "Kinzel",
+    "Kinselo",
+    "Kinsello",
+    "Kinslow",
+    "Kinsel",
+    "Kincello",
+    "Kinjelo",
+    "Kinjello",
+    "Kinjero"
+  ],
+  "Chiron": [
+    "Siron",
+    "Shiron",
+    "Sirron",
+    "Syron",
+    "Si-ron",
+    "Sirion",
+    "Cylon",
+    "Cyron",
+    "Sirone",
+    "Shirone",
+    "Shilon",
+    "Cyrone"
+  ],
+  "Kelliark": [
+    "Kelliac",
+    "Kelliack",
+    "Kelliak",
+    "Kellic",
+    "Kellick",
+    "Kellicak",
+    "Kelriak",
+    "Kellyak",
+    "Kelliaak"
+  ],
+  "Veradin": [
+    "Beradin",
+    "Vera Din",
+    "Beradyne",
+    "BeraDyne",
+    "Veradine",
+    "Veraedin",
+    "Verradin",
+    "Veradini"
+  ],
+  "Vahn": [
+    "Ban",
+    "Van"
+  ],
+  "Zito": [
+    "Jito",
+    "Gito"
+  ],
+  "Talaris": [
+    "Talris",
+    "Talalis",
+    "Talarris",
+    "Talalris",
+    "Talari",
+    "Talares",
+    "Talariis",
+    "Tallaris",
+    "Talarius",
+    "Tararis",
+    "Talgis",
+    "Talaries"
+  ],
+  "Syris": [
+    "Sirius",
+    "Cyrus",
+    "Siris",
+    "Ciris"
+  ],
+  "Luntia": [
+    "Runtia",
+    "Runthia",
+    "Runtyia",
+    "Runetia",
+    "Lunita",
+    "Runcantia",
+    "Runtya",
+    "Runatia"
+  ],
+  "Mary": [
+    "Meri",
+    "Mery",
+    "Merry"
+  ],
+  "Gilly": [
+    "Gilli",
+    "Gili"
+  ],
+  "Lata": [
+    "Rata"
+  ],
+  "Fey": [
+    "Fei",
+    "Pei"
+  ],
+  "Proch": [
+    "Procchi",
+    "Prochi"
+  ],
+  "Diphus": [
+    "Dephus",
+    "Defuse",
+    "Defus",
+    "Difus",
+    "Dyfus",
+    "Dipus"
+  ],
+  "Vigo": [
+    "Vugo",
+    "Buego"
+  ],
+  "Vermont": [
+    "Bement",
+    "Biment",
+    "Bivment",
+    "Bimont",
+    "Bimunt",
+    "Bument",
+    "Viment",
+    "Vermontt"
+  ],
+  "Vamel": [
+    "Barmel",
+    "Barmul",
+    "Bamel",
+    "Bamul",
+    "Bammel",
+    "Varmel",
+    "Vammel"
+  ],
+  "Hairan": [
+    "Hiran",
+    "Hailan",
+    "Hyran",
+    "Hi-Ran",
+    "Highlan",
+    "Hyeran",
+    "Hayran"
+  ],
+  "Tikan": [
+    "Tichan",
+    "Tican",
+    "Tikkan",
+    "Tikhan",
+    "Teekan",
+    "Tickan"
+  ],
+  "Lokia": [
+    "Rokia",
+    "Lokiya",
+    "Rokiah"
+  ],
+  "Elona": [
+    "Elrona",
+    "Elerona",
+    "Ellona",
+    "Elorna"
+  ],
+  "Phaelito": [
+    "Paelleto",
+    "Paelleito",
+    "Paelrito",
+    "Paelito",
+    "Paerleto",
+    "Parielito",
+    "Parelioto",
+    "Faelito",
+    "Parieto"
+  ],
+  "Ayula": [
+    "Ayura",
+    "Ayulra"
+  ],
+  "Shimat": [
+    "Shimart",
+    "Simart",
+    "Simat",
+    "Shimate",
+    "Shimar"
+  ],
+  "Eltiot": [
+    "Eltyeot",
+    "Eltieot",
+    "Eltyiet",
+    "Eltieth",
+    "Eltiyet",
+    "Eltieit"
+  ],
+  "Bale": [
+    "Veil",
+    "Vail",
+    "Beil"
+  ],
+  "Orgal": [
+    "Orugal"
+  ],
+  "Solderet": [
+    "Soldelet",
+    "Soldieret",
+    "Soldeuret",
+    "Soldierlet",
+    "Solterlet",
+    "Soldrett",
+    "Soldret",
+    "Soldrelt",
+    "Soldorette",
+    "Soldrelet",
+    "Soldred",
+    "Solderlet",
+    "Soldlet",
+    "Soldrets",
+    "Soldoret",
+    "Soldere",
+    "Soldreth"
+  ],
+  "Hedo": [
+    "Hedow",
+    "Hedoh",
+    "Heodo"
+  ],
+  "Zephyrin": [
+    "Zephrine",
+    "Jephyrin",
+    "Jephirin",
+    "Jephrin",
+    "Jepirin",
+    "Zephirin"
+  ],
+  "Bishkel": [
+    "Vishukel",
+    "Bishukel",
+    "Vischel"
+  ],
+  "Valkas": [
+    "Balkas",
+    "Balchas",
+    "Balakas",
+    "Balcas"
+  ],
+  "Kadun": [
+    "Cadun"
+  ],
+  "Temar": [
+    "Tamar",
+    "Themer"
+  ],
+  "Murakan": [
+    "Muraikan",
+    "Moorakan",
+    "Muraka",
+    "Murcan",
+    "Muracan",
+    "Murka"
+  ],
+  "Barisada": [
+    "Varisada"
+  ],
+  "Hister": [
+    "Hester",
+    "Hyster"
+  ],
+  "Mort": [
+    "Mot",
+    "Moat",
+    "Motte",
+    "Mote",
+    "Mott"
+  ],
+  "Tess": [
+    "Tes",
+    "Teth"
+  ],
+  "Sarah": [
+    "Sara"
+  ],
+  "Anne": [
+    "Ann"
+  ],
+  "Myu": [
+    "Mu",
+    "Mew"
+  ],
+  "Lani": [
+    "Rani"
+  ],
+  "Queen Lani": [
+    "King Lani",
+    "King Rani"
+  ],
+  "Jet": [
+    "Zet"
+  ],
+  "Zed": [
+    "Jed",
+    "Jedd"
+  ],
+  "Berakt": [
+    "Beract",
+    "Belract",
+    "Veract",
+    "Barakt",
+    "Belakht"
+  ],
+  "Vankella": [
+    "Bancella",
+    "Bankella",
+    "Banquilla"
+  ],
+  "Huphester": [
+    "Hyuphester",
+    "HyuFester",
+    "Hufester"
+  ],
+  "Patlok": [
+    "Patl",
+    "Pattle",
+    "Partl"
+  ],
+  "Rakiman": [
+    "Lakiman"
+  ],
+  "Ram": [
+    "Lam"
+  ],
+  "Linpa": [
+    "Linfa"
+  ],
+  "Lin": [
+    "Rin"
+  ],
+  "Ragal": [
+    "Lagal"
+  ],
+  "Grenil": [
+    "Grnil",
+    "Grunil"
+  ],
+  "Krantel": [
+    "Crantel"
+  ],
+  "Viseps": [
+    "Biseps",
+    "Bisepts",
+    "Bicepts",
+    "Bisechs",
+    "Bisekhs"
+  ],
+  "Qwaul": [
+    "Kwaul",
+    "Kwa-ul",
+    "Kwool",
+    "Kwaoul",
+    "Qwaoul",
+    "Quaoul"
+  ],
+  "White Whale": [
+    "Baekgyeong"
+  ],
+  "Nameless Assassins": [
+    "Moomyeong"
+  ],
+  "Young Patriarch": [
+    "Sogaju",
+    "SoGaJoo"
+  ],
+  "Young Palace Master": [
+    "Sogungju",
+    "Sovereign of the Small Palace"
+  ],
+  "Lingling": [
+    "Ringring",
+    "RingRing",
+    "LingLing"
+  ],
+  "Jin": [
+    "Chin"
+  ],
+  "Holy Tree Crown": [
+    "Holy Water Vessel"
+  ],
+  "Hidden Palace": [
+    "Bi-Gung",
+    "Bi-gung",
+    "BiGung",
+    "Bigung",
+    "Begug",
+    "Bi-Kyung"
+  ],
+  "Genesis": [
+    "Changseong",
+    "Changsung",
+    "Chang Sung"
+  ],
+  "Sigmund": [
+    "Siegmund"
+  ],
+  "Bradamante": [
+    "Brada Manta",
+    "Brada Mante",
+    "BradaMante",
+    "BradeManta",
+    "Brahadamante",
+    "BradMante",
+    "Bramante"
+  ],
+  "Lafrarosa": [
+    "Laprarosa",
+    "Laphrarosa",
+    "Laphlarosa",
+    "Laplarosa",
+    "Raplarosa",
+    "Lapralosa",
+    "Rafarosa",
+    "Laparosa"
+  ],
+  "Red Plutonian": [
+    "Jeokmyeong",
+    "Jukmyeong",
+    "Chakmyeong",
+    "Juckmyung",
+    "Jeokmyeok"
+  ],
+  "Blue Plutonian": [
+    "Cheongmyeong",
+    "Qingming"
+  ],
+  "Sister Goddess of Battle": [
+    "Battle God Sister",
+    "Battle God sister",
+    "Sister Battle God",
+    "sister Battle God",
+    "God sister",
+    "Two Gods brother",
+    "Two Gods brothers",
+    "Two Gods Brother",
+    "Two Gods Brothers"
+  ],
+  "Zipfel": [
+    "Zipple",
+    "Zipel",
+    "Zippel",
+    "Zippell",
+    "Zifel",
+    "Zifell",
+    "Ziffle",
+    "Ziffel",
+    "Zifl",
+    "Zifil",
+    "Zif",
+    "Zipl",
+    "Ziple",
+    "Zipil",
+    "Zipul",
+    "Ziphl",
+    "Zipfl",
+    "Ziphe",
+    "Ziphr",
+    "Ziphil",
+    "Zipheul",
+    "Ziphel",
+    "Ziph",
+    "Zipfle",
+    "Zipfe",
+    "Ziepl",
+    "Ziepel",
+    "Ziefl",
+    "Ziepf",
+    "Zieffel",
+    "Ziephl",
+    "Zieph",
+    "Ziephel",
+    "Jipl",
+    "Jiple",
+    "Jipel",
+    "Jipil",
+    "Jipul",
+    "Jipfur",
+    "Jipley",
+    "Jieful",
+    "Jiffel",
+    "Jiffle",
+    "Gipel",
+    "Giepl",
+    "Zhipil",
+    "Zhiple",
+    "Zephl",
+    "Zyphl"
+  ],
+  "Gliek": [
+    "Gliyak",
+    "Gleak",
+    "Gliac",
+    "Glieck",
+    "Gleyek",
+    "Grieq",
+    "Gleek",
+    "Glieak",
+    "Glick",
+    "Glyiek",
+    "Gliak",
+    "Glik",
+    "Gliec",
+    "Glicek"
+  ],
+  "Quikantel": [
+    "Quicantel",
+    "Qucantel"
+  ],
+  "Lueth": [
+    "Leuth",
+    "Luet",
+    "Leot",
+    "Leat",
+    "Luret",
+    "Lehet",
+    "Lret",
+    "Lreat",
+    "Lrett",
+    "Luett",
+    "Leth"
+  ],
+  "Peitel": [
+    "Paitel",
+    "Faitel",
+    "Pheitel",
+    "Faytel",
+    "Payitel",
+    "Phaitel",
+    "Paytel",
+    "Pattel",
+    "Pettel",
+    "Phetel"
+  ],
+  "Keydart": [
+    "Kidard",
+    "Kidado",
+    "Kidad"
+  ],
+  "Padler": [
+    "Paddler",
+    "Pardler",
+    "Paradelar",
+    "Paddleur",
+    "Padlur"
+  ],
+  "Bubare": [
+    "Bubar",
+    "Bubarr",
+    "Bubbar",
+    "Bubvar",
+    "Bubard",
+    "Bouvard"
+  ],
+  "Margiella": [
+    "Marjiella",
+    "Marziella",
+    "Mariella",
+    "Marjiela",
+    "Marjiel",
+    "Margiela",
+    "Marzella",
+    "Mariela"
+  ],
+  "Ibriano": [
+    "Ivelliano",
+    "Evriano",
+    "Ivliano",
+    "Ibriliano"
+  ],
+  "Morganil": [
+    "Morganiel",
+    "Morganial",
+    "Morganie"
+  ],
+  "Jorden": [
+    "Jordan"
+  ],
+  "Alphen": [
+    "Alpen"
+  ],
+  "Beliz": [
+    "Belize",
+    "Belliz",
+    "Belriz",
+    "Veliz"
+  ],
+  "Frey": [
+    "Frei",
+    "Freya"
+  ],
+  "Dranax": [
+    "Dranaks",
+    "Dranakus",
+    "Dracnax",
+    "Dranak"
+  ],
+  "Gramm": [
+    "Gram"
+  ],
+  "Sheenu": [
+    "Shinu",
+    "Shinnu"
+  ],
+  "Kashmir": [
+    "Kashimir",
+    "Casimir",
+    "Kasimir",
+    "Kazimir"
+  ],
+  "Latree": [
+    "Latry",
+    "Latri",
+    "Ratree"
+  ],
+  "Garmund": [
+    "Garmond",
+    "Garumunde",
+    "Garmonde"
+  ],
+  "Mcrolan": [
+    "McRolan",
+    "McRonan",
+    "McRonans",
+    "MacLoran",
+    "McLoran"
+  ],
+  "Ballas": [
+    "Vallas",
+    "Valas",
+    "Balaas",
+    "Balas",
+    "Ballass"
+  ],
+  "Heluram": [
+    "Helrum",
+    "Helluram",
+    "Hellurum",
+    "Helurum"
+  ],
+  "Silderay": [
+    "Silderei",
+    "Sildere"
+  ],
+  "Vyollo": [
+    "Violo",
+    "Violro",
+    "Biollo"
+  ],
+  "Baltirock": [
+    "Baltirok",
+    "Baltiroc"
+  ],
+  "Milkano": [
+    "Milcano"
+  ],
+  "Boras": [
+    "Bora",
+    "Bolas",
+    "Voras"
+  ]
 }

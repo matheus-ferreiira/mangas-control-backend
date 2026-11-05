@@ -9,7 +9,7 @@ O trabalho combina varredura integral do corpus, glossário explícito e interve
 ## Critérios de revisão
 
 - Nomes com variantes de transliteração usam uma grafia única nesta edição, conforme `resources/novels/editorial-glossary.json`. É uma convenção editorial, não uma declaração de que todas as formas escolhidas são oficiais.
-- Pronomes, parentesco e títulos são corrigidos quando a cena identifica o referente. Sugestões contraditórias ou ambíguas são preservadas como material de origem, sem aprovação automática. O imperativo inglês `Let` não é trocado globalmente pelo nome Leuth; termos comuns como spirit, soul, king e brother também não recebem substituição global de significado.
+- Pronomes, parentesco e títulos são corrigidos quando a cena identifica o referente. Sugestões contraditórias ou ambíguas são preservadas como material de origem, sem aprovação automática. O imperativo inglês `Let` não é trocado globalmente pelo nome Lueth; termos comuns como spirit, soul, king e brother também não recebem substituição global de significado.
 - Títulos de flagbearer só aproveitam a sugestão quando há um ordinal explícito; o número permanece inalterado.
 - Quebras introduzidas no meio de frases e palavras são reparadas com as marcas de parágrafo e os runs dos DOCX. As junções preservam a presença ou ausência de espaço do texto original. Há ainda nove junções de continuações inequívocas conferidas por contexto.
 - Sugestões que removem narrativa não são aceitas em massa. Comentários de leitores e respostas automáticas de tradução não entram no corpo da novel.
@@ -49,3 +49,13 @@ Validação executada: seis testes editoriais, cobrindo todos os capítulos; 14 
 **Como e por quê:** decisões explícitas, verificáveis e reproduzíveis, mantendo a narrativa recuperada em vez de aceitar todas as revisões. Cada mudança contextual possui uma âncora exata; uma mudança de origem faz a preparação falhar em vez de aplicar a correção a outro trecho.
 
 **Limites:** a fonte inglesa já contém tradução automática. Expressões cujo sentido exige consulta ao original coreano não foram reescritas com significado presumido. A varredura e as correções documentadas não equivalem a uma revisão humana frase a frase de toda a obra.
+
+## Conferência de nomes com a wiki — 2026-11-04
+
+A lista de personagens e as páginas individuais da wiki fornecida pelo usuário foram comparadas com variantes encontradas nos 747 capítulos. Quando a navegação e a página divergem, esta edição prefere o título da página individual. Por isso, Shirone, Sirone, Shilon e Cyron passam a Chiron; Zipple passa a Zipfel; Gliyak a Gliek; Quicantel a Quikantel; Leuth a Lueth; Paitel a Peitel; Kidard a Keydart; Paddler a Padler. Também foram incorporadas variantes contextualmente identificadas de Bubare, Margiella, Ibriano, Morganil, Jorden, Alphen, Beliz, Frey, Dranax, Gramm, Sheenu, Kashmir, Latree, Garmund, Mcrolan, Ballas, Heluram e Silderay.
+
+As referências estão em `resources/novels/editorial/wiki-name-reference.json`. A busca aproximada serviu apenas para localizar candidatos; não autoriza substituições automáticas por semelhança. Draka/Draca, Mitel, Rok, Locke, Luke, Mureka e os nomes comuns ambíguos permanecem separados. Alisa/Alisia e outros nomes sem decisão segura não são renomeados apenas porque existe um título parecido na wiki. Não há garantia de que todo nome ainda sem referência esteja correto.
+
+A reconstrução conserva 347 intervenções contextuais e 129 junções anteriores. O resultado acumulado contém 17.599 parágrafos ajustados e 21.895 substituições de nomes/termos desde os DOCX originais. Sete testes editoriais conferem todos os capítulos, a normalização idempotente, os hashes e as regressões. Nenhum comando de banco é necessário.
+
+Nesta rodada, 638 capítulos receberam alterações em 5168 parágrafos em relação à edição anterior.
