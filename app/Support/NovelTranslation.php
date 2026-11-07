@@ -49,7 +49,8 @@ final class NovelTranslation
             $names = self::NAMES;
             usort($names, static fn (string $a, string $b) => strlen($b) <=> strlen($a));
             $alternatives = implode('|', array_map(static fn (string $name) => preg_quote($name, '/'), $names));
-            $pattern = '/(?<![\p{L}\p{N}\p{M}_])('.$alternatives.')(?![\p{L}\p{N}\p{M}_])/u';
+            // Keep adjacent spaces inside the protected span so translation cannot trim them.
+            $pattern = '/(\h*(?<![\p{L}\p{N}\p{M}_])(?:'.$alternatives.')(?![\p{L}\p{N}\p{M}_])\h*)/u';
         }
 
         $parts = preg_split($pattern, $text, -1, PREG_SPLIT_DELIM_CAPTURE);
