@@ -27,9 +27,9 @@
         </nav>
     </header>
     <main>
-        <h1>{!! \App\Support\NovelTranslation::protect($chapter['title']) !!}</h1>
+        <h1>{{ $chapter['title'] }}</h1>
         @foreach ($chapter['paragraphs'] as $paragraph)
-            <p>{!! \App\Support\NovelTranslation::protect($paragraph) !!}</p>
+            <p>{{ $paragraph }}</p>
         @endforeach
     </main>
     <footer>
