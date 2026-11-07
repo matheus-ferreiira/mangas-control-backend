@@ -19,7 +19,7 @@
 </head>
 <body>
     <header>
-        <strong>{{ $novel['title'] }}</strong>
+        <strong translate="no" class="notranslate">{{ $novel['title'] }}</strong>
         <p lang="pt-BR">Para traduzir, abra o menu do navegador e escolha “Traduzir” → Português. Este link expira em 12 horas. O progresso deve ser marcado no Neon Curator.</p>
         <nav aria-label="Chapter navigation">
             @if ($previousUrl)<a rel="noreferrer" href="{{ $previousUrl }}">← Previous chapter</a>@endif
@@ -27,9 +27,9 @@
         </nav>
     </header>
     <main>
-        <h1>{{ $chapter['title'] }}</h1>
+        <h1>{!! \App\Support\NovelTranslation::protect($chapter['title']) !!}</h1>
         @foreach ($chapter['paragraphs'] as $paragraph)
-            <p>{{ $paragraph }}</p>
+            <p>{!! \App\Support\NovelTranslation::protect($paragraph) !!}</p>
         @endforeach
     </main>
     <footer>
